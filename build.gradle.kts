@@ -19,7 +19,7 @@ plugins {
     `teavm-release`
 }
 
-group = "org.teavm"
+group = "org.ngengine"
 
 idea.module.excludeDirs.add(File(rootDir, "build-dir"))
 

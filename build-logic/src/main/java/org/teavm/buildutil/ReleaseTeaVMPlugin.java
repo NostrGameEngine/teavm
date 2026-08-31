@@ -20,7 +20,6 @@ import org.gradle.api.Project;
 import org.jreleaser.gradle.plugin.JReleaserExtension;
 import org.jreleaser.gradle.plugin.JReleaserPlugin;
 import org.jreleaser.model.Active;
-import org.jreleaser.model.Signing;
 import org.jreleaser.model.api.deploy.maven.MavenCentralMavenDeployer;
 
 public class ReleaseTeaVMPlugin implements Plugin<Project> {
@@ -35,20 +34,7 @@ public class ReleaseTeaVMPlugin implements Plugin<Project> {
             target.afterEvaluate(p -> {
                 var jreleaser = target.getExtensions().getByType(JReleaserExtension.class);
                 jreleaser.getGitRootSearch().set(true);
-                jreleaser.signing(signing -> {
-                    var providers = target.getProviders();
-                    signing.getActive().set(Active.ALWAYS);
-                    signing.getArmored().set(true);
-                    signing.getMode().set(Signing.Mode.COMMAND);
-                    signing.command(command -> {
-                        command.getKeyName().set(providers.gradleProperty("teavm.publish.gpg.keyName"));
-                        command.getPublicKeyring().set(providers.gradleProperty(
-                                "teavm.publish.gpg.secretKeyRingFile"));
-                        command.getDefaultKeyring().set(true);
-                        command.getArgs().add("--no-random-seed-file");
-                    });
-                    signing.getPassphrase().set(providers.gradleProperty("teavm.publish.gpg.password"));
-                });
+                jreleaser.signing(signing -> signing.getActive().set(Active.NEVER));
                 jreleaser.deploy(deploy -> {
                     deploy.maven(maven -> {
                         maven.pomchecker(pomchecker -> {
@@ -60,12 +46,17 @@ public class ReleaseTeaVMPlugin implements Plugin<Project> {
                             var sonatype = maven.getMavenCentral().maybeCreate("sonatype");
                             sonatype.getActive().set(Active.ALWAYS);
                             sonatype.getUrl().set("https://central.sonatype.com/api/v1/publisher");
+                            sonatype.getNamespace().set("org.ngengine");
                             sonatype.getStagingRepositories().add("build/staging-deploy");
-                            sonatype.getUsername().set(target.getProviders().gradleProperty("ossrhUsername"));
-                            sonatype.getPassword().set(target.getProviders().gradleProperty("ossrhPassword"));
+                            sonatype.getUsername().set(target.getProviders()
+                                    .environmentVariable("SONATYPE_USERNAME")
+                                    .orElse(target.getProviders().gradleProperty("ossrhUsername")));
+                            sonatype.getPassword().set(target.getProviders()
+                                    .environmentVariable("SONATYPE_PASSWORD")
+                                    .orElse(target.getProviders().gradleProperty("ossrhPassword")));
                             sonatype.getStage().set(MavenCentralMavenDeployer.Stage.FULL);
-                            sonatype.getSign().set(true);
-                            sonatype.getApplyMavenCentralRules().set(false);
+                            sonatype.getSign().set(false);
+                            sonatype.getApplyMavenCentralRules().set(true);
                         });
                     });
                 });

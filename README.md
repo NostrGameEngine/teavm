@@ -1,7 +1,40 @@
 # TeaVM
 
-[![.github/workflows/ci.yml](https://github.com/konsoletyper/teavm/actions/workflows/ci.yml/badge.svg)](https://github.com/konsoletyper/teavm/actions/workflows/ci.yml)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.teavm/teavm-maven-plugin/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.teavm/teavm-maven-plugin) 
+This is the Nostr Game Engine maintained TeaVM distribution. It follows the
+upstream TeaVM project while carrying the fixes required by NGE's JavaScript
+and WebAssembly GC browser backends. Published fork artifacts use the
+`org.ngengine` Maven group; Java package names remain `org.teavm` for source
+compatibility.
+
+Gradle applications using a snapshot should add the Maven Central snapshots
+repository to plugin resolution in `settings.gradle.kts`:
+
+```kotlin
+pluginManagement {
+    repositories {
+        maven("https://central.sonatype.com/repository/maven-snapshots/")
+        gradlePluginPortal()
+    }
+}
+```
+
+They can then use the fork plugin id and version:
+
+```kotlin
+plugins {
+    id("org.ngengine.teavm") version "0.16.0-SNAPSHOT"
+}
+```
+
+Snapshots are available from
+`https://central.sonatype.com/repository/maven-snapshots/`. Release artifacts
+are published to Maven Central. Projects that declare fork libraries directly
+must add the same snapshot repository to `dependencyResolutionManagement` or
+their normal dependency repositories. The original TeaVM project and
+documentation remain available at [teavm.org](https://teavm.org/).
+
+[![.github/workflows/ci.yml](https://github.com/NostrGameEngine/teavm/actions/workflows/ci.yml/badge.svg)](https://github.com/NostrGameEngine/teavm/actions/workflows/ci.yml)
+[![Maven Central](https://img.shields.io/maven-central/v/org.ngengine/teavm-gradle-plugin)](https://central.sonatype.com/artifact/org.ngengine/teavm-gradle-plugin)
 [![Download](https://teavm.org/maven/latestBadge.svg)](https://teavm.org/maven/_latest)
 [![Discord](https://img.shields.io/discord/1368634309849911386
 )](https://discord.gg/QvcBHmdE5J)
@@ -17,7 +50,7 @@ Useful links:
 
 ## Building TeaVM
 
-Simply clone source code (`git clone https://github.com/konsoletyper/teavm.git`)
+Simply clone source code (`git clone https://github.com/NostrGameEngine/teavm.git`)
 and run Gradle build (`./gradlew publishToMavenLocal` or `gradlew.bat publishToMavenLocal`).
 You should build samples separately, as described in [corresponding readme file](samples/README.md).
 

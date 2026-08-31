@@ -1,0 +1,84 @@
+name: Publish NGE TeaVM
+
+on:
+  push:
+    branches:
+      - master
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish to Maven Central
+    if: github.repository == 'NostrGameEngine/teavm'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+      SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+      GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+      GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.sha }}
+          fetch-depth: 0
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Validate publishing secrets
+        shell: bash
+        run: |
+          missing=0
+          for name in SONATYPE_USERNAME SONATYPE_PASSWORD GPG_PRIVATE_KEY GPG_PASSPHRASE; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Missing repository secret: ${name}"
+              missing=1
+            fi
+          done
+          exit "${missing}"
+
+      - name: Publish snapshot
+        if: github.event_name == 'push'
+        run: >-
+          ./gradlew --no-daemon --no-configuration-cache
+          build -x test
+          publishAllPublicationsToCentralSnapshotsRepository
+          -Pteavm.project.version=0.16.0-SNAPSHOT
+          --stacktrace
+
+      - name: Publish release
+        if: github.event_name == 'release'
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          version="${RELEASE_TAG#v}"
+          if [[ -z "$version" || "$version" == *-SNAPSHOT ]]; then
+            echo "Invalid release version: $RELEASE_TAG" >&2
+            exit 1
+          fi
+          ./gradlew --no-daemon --no-configuration-cache \
+            build -x test \
+            publishAllPublicationsToStagingRepository \
+            -Pteavm.mavenCentral.publish=true \
+            -Pteavm.project.version="$version" \
+            --stacktrace
+          ./gradlew --no-daemon --no-configuration-cache \
+            jreleaserDeploy \
+            -Pteavm.mavenCentral.publish=true \
+            -Pteavm.project.version="$version" \
+            --stacktrace
