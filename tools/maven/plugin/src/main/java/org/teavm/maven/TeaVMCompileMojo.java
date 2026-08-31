@@ -384,7 +384,7 @@ public class TeaVMCompileMojo extends AbstractMojo {
 
     private String[] createDaemonClassPath() {
         Artifact toolArtifact = pluginArtifacts.stream()
-                .filter(artifact -> artifact.getGroupId().equals("org.teavm")
+                .filter(artifact -> artifact.getGroupId().equals("org.ngengine")
                         && artifact.getArtifactId().equals("teavm-tooling"))
                 .findFirst()
                 .orElse(null);

@@ -24,6 +24,8 @@ import org.gradle.api.publish.maven.plugins.MavenPublishPlugin;
 import org.gradle.api.publish.plugins.PublishingPlugin;
 import org.gradle.api.tasks.javadoc.Javadoc;
 import org.gradle.external.javadoc.CoreJavadocOptions;
+import org.gradle.plugins.signing.SigningExtension;
+import org.gradle.plugins.signing.SigningPlugin;
 
 public abstract class PublishTeaVMPlugin implements Plugin<Project> {
     private static final String EXTENSION_NAME = "teavmPublish";
@@ -58,14 +60,33 @@ public abstract class PublishTeaVMPlugin implements Plugin<Project> {
                         repository.getCredentials().setPassword(target.getProviders().gradleProperty(
                                 "teavm.publish.password").get());
                     });
-                } else {
-                    repositories.maven(repository -> {
-                        repository.setName("teavm");
-                        repository.setUrl(target.getRootProject().getLayout().getBuildDirectory()
-                                .dir("staging-deploy"));
-                    });
                 }
+                repositories.maven(repository -> {
+                    repository.setName("centralSnapshots");
+                    repository.setUrl("https://central.sonatype.com/repository/maven-snapshots/");
+                    repository.getCredentials().setUsername(target.getProviders()
+                            .environmentVariable("SONATYPE_USERNAME").getOrElse(""));
+                    repository.getCredentials().setPassword(target.getProviders()
+                            .environmentVariable("SONATYPE_PASSWORD").getOrElse(""));
+                });
+                repositories.maven(repository -> {
+                    repository.setName("staging");
+                    repository.setUrl(target.getRootProject().getLayout().getBuildDirectory()
+                            .dir("staging-deploy"));
+                });
             });
+
+            var signingKey = target.getProviders().environmentVariable("GPG_PRIVATE_KEY")
+                    .orElse(target.getProviders().gradleProperty("signingKey")).getOrNull();
+            if (signingKey != null && !signingKey.isBlank()) {
+                target.getPlugins().apply(SigningPlugin.class);
+                var signingPassword = target.getProviders().environmentVariable("GPG_PASSPHRASE")
+                        .orElse(target.getProviders().gradleProperty("signingPassword")).getOrElse("");
+                target.getExtensions().configure(SigningExtension.class, signing -> {
+                    signing.useInMemoryPgpKeys(signingKey, signingPassword);
+                    signing.sign(publishing.getPublications());
+                });
+            }
         }));
 
         target.getExtensions().configure(JavaPluginExtension.class, ext -> {
@@ -81,7 +102,7 @@ public abstract class PublishTeaVMPlugin implements Plugin<Project> {
 
     private void customizePublication(Project project, MavenPublication publication, ExtensionImpl extension,
             boolean includeComponent) {
-        publication.setGroupId("org.teavm");
+        publication.setGroupId("org.ngengine");
         if (extension.getArtifactId() != null) {
             publication.setArtifactId(extension.getArtifactId());
         }

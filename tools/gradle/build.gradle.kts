@@ -31,18 +31,18 @@ dependencies {
 }
 
 gradlePlugin {
-    website = "https://teavm.org"
-    vcsUrl = "https://github.com/konsoletyper/teavm"
+    website = "https://github.com/NostrGameEngine/teavm"
+    vcsUrl = "https://github.com/NostrGameEngine/teavm"
     plugins {
         create("TeaVMPlugin") {
-            id = "org.teavm"
+            id = "org.ngengine.teavm"
             implementationClass = "org.teavm.gradle.TeaVMPlugin"
             displayName = "TeaVM application plugin"
             description = "Installs TeaVM compilation tasks, configurations and source sets"
             tags = listOf("teavm", "javascript", "webassembly", "compiler", "aot-compiler")
         }
         create("TeaVMLibraryPlugin") {
-            id = "org.teavm.library"
+            id = "org.ngengine.teavm.library"
             implementationClass = "org.teavm.gradle.TeaVMLibraryPlugin"
             displayName = "TeaVM library plugin"
             description = "Installs TeaVM DSL for consuming TeaVM libraries and running tests in a browser"
@@ -126,9 +126,8 @@ tasks.withType<Checkstyle> {
 publishing {
     publications {
         create<MavenPublication>("pluginMaven") {
-            groupId = "org.teavm"
+            groupId = "org.ngengine"
             artifactId = "teavm-gradle-plugin"
         }
     }
 }
-

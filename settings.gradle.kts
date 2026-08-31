@@ -118,12 +118,18 @@ fun MavenPom.setupPom(project: Project) {
             email = "konsoletyper@gmail.com"
             timezone = "Europe/Berlin"
         }
+        developer {
+            id = "rblb"
+            name = "Riccardo Balbo"
+            email = "os@rblb.it"
+            timezone = "Europe/Rome"
+        }
     }
     scm {
-        url = "https://github.com/konsoletyper/teavm"
-        connection = "scm:git:git@github.com:konsoletyper/teavm.git"
+        url = "https://github.com/NostrGameEngine/teavm"
+        connection = "scm:git:git@github.com:NostrGameEngine/teavm.git"
     }
-    url = "https://teavm.org"
+    url = "https://github.com/NostrGameEngine/teavm"
 }
 
 dependencyRelocation {

@@ -21,6 +21,11 @@ git archive HEAD | tar -x -C build-dir || { echo 'Git archive failed' ; exit 1; 
 
 TEAVM_RELEASE_VERSION=$1
 
+: "${SONATYPE_USERNAME:?SONATYPE_USERNAME is required}"
+: "${SONATYPE_PASSWORD:?SONATYPE_PASSWORD is required}"
+: "${GPG_PRIVATE_KEY:?GPG_PRIVATE_KEY is required}"
+: "${GPG_PASSPHRASE:?GPG_PASSPHRASE is required}"
+
 function release_teavm {
   echo "Building version $TEAVM_RELEASE_VERSION"
 
@@ -29,15 +34,10 @@ function release_teavm {
   GRADLE+=" --no-daemon --no-configuration-cache --stacktrace"
   GRADLE+=" -Pteavm.mavenCentral.publish=true"
   GRADLE+=" -Pteavm.project.version=$TEAVM_RELEASE_VERSION"
-  GRADLE+=" -Pteavm.publish.gpg.keyName=$TEAVM_GPG_KEY_ID"
-  GRADLE+=" -Pteavm.publish.gpg.password=$TEAVM_GPG_PASSWORD"
-  GRADLE+=" -Pteavm.publish.gpg.secretKeyRingFile=$HOME/.gnupg/secring.gpg"
-  GRADLE+=" -PossrhUsername=$TEAVM_SONATYPE_LOGIN"
-  GRADLE+=" -PossrhPassword=$TEAVM_SONATYPE_PASSWORD"
-  GRADLE+=" -Pteavm.idea.publishToken=$TEAVM_INTELLIJ_TOKEN"
 
-  $GRADLE build -x test || { echo 'Build failed' ; return 1; }
-  $GRADLE publishAllPublicationsToTeavmRepository jreleaserSign jreleaserDeploy publishPlugin publishPlugins || { echo 'Release failed' ; return 1; }
+  $GRADLE build -x test publishAllPublicationsToStagingRepository \
+    || { echo 'Build or staging failed' ; return 1; }
+  $GRADLE jreleaserDeploy || { echo 'Release failed' ; return 1; }
 
   return 0
 }
