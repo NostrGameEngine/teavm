@@ -105,7 +105,7 @@ public class TeaVMDownloader implements Closeable {
     }
 
     private String downloadFileList(HttpClient client) throws IOException, URISyntaxException, InterruptedException {
-        var path = "org/teavm/teavm-devserver-runner/" + version + "/teavm-devserver-runner-" + version
+        var path = "org/ngengine/teavm-devserver-runner/" + version + "/teavm-devserver-runner-" + version
                 + "-dependencies.txt";
         if (version.endsWith("-SNAPSHOT")) {
             var localPath = System.getProperty("user.home") + "/.m2/repository/" + path;
@@ -133,12 +133,12 @@ public class TeaVMDownloader implements Closeable {
         var path = groupId.replace('.', '/') + "/" + artifactId + "/" + version + "/" + artifactId
                 + "-" + version + ".jar";
         var outPath = localPath().toPath().resolve(artifactId + ".jar");
-        if (groupId.equals("org.teavm") && version.endsWith("-SNAPSHOT")) {
+        if (groupId.equals("org.ngengine") && version.endsWith("-SNAPSHOT")) {
             var pathInLocalRepository = System.getProperty("user.home") + "/.m2/repository/" + path;
             Files.copy(Paths.get(pathInLocalRepository), outPath);
             return;
         }
-        var repo = groupId.endsWith("org.teavm") ? getTeaVMRepo() : MAVEN_CENTRAL;
+        var repo = groupId.equals("org.ngengine") ? getTeaVMRepo() : MAVEN_CENTRAL;
         var request = HttpRequest.newBuilder()
                 .GET()
                 .uri(new URI(repo + path))
