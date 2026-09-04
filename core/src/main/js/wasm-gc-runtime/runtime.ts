@@ -874,7 +874,7 @@ function jsoImports(imports: Record<string, any>, context: Context, stringBuilti
             }
         },
         concatArray: (a: unknown[], b: unknown[]): unknown[] => [...a, ...b],
-        getJavaException: (e: Record<symbol, unknown>): any => e[javaExceptionSymbol],
+        getJavaException: (e: Record<symbol, unknown>): any => e[javaExceptionSymbol] ?? null,
         getJSException: (e: unknown): Error => {
             const getJsException = context.exports["teavm.getJsException"] as Function;
             return getJsException(e);

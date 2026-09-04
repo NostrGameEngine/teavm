@@ -40,7 +40,7 @@ class JSPromiseHelper {
                         if (javaException != null) {
                             callback.error(javaException);
                         } else {
-                            callback.error(new RuntimeException());
+                            callback.error(new RuntimeException(((JSError) err).getMessage()));
                         }
                     } else {
                         callback.error(new RuntimeException());
