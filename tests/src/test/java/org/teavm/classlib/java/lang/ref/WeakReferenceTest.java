@@ -84,7 +84,7 @@ public class WeakReferenceTest {
     }
 
     @Test
-    @SkipPlatform({ TestPlatform.C, TestPlatform.WEBASSEMBLY_GC, TestPlatform.JAVASCRIPT })
+    @SkipPlatform({TestPlatform.C, TestPlatform.JAVASCRIPT})
     public void queueRemove() throws InterruptedException {
         var queue = new ReferenceQueue<>();
         var ref = createAndTestRef(queue);
