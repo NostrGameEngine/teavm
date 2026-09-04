@@ -16,8 +16,9 @@
 package org.teavm.backend.wasm.transformation;
 
 import java.lang.ref.Reference;
+import java.lang.ref.ReferenceQueue;
 
-class ReferenceQueueTemplate<T> {
+class ReferenceQueueTemplate<T> extends ReferenceQueue<T> {
     private ReferenceQueueEntry<T> start;
     private ReferenceQueueEntry<T> end;
 
@@ -34,6 +35,9 @@ class ReferenceQueueTemplate<T> {
     }
 
     public void supply(Reference<T> reference) {
+        if (reportNext(reference)) {
+            return;
+        }
         var entry = new ReferenceQueueEntry<>(reference);
         if (start == null) {
             start = entry;
@@ -41,5 +45,9 @@ class ReferenceQueueTemplate<T> {
             end.next = entry;
         }
         end = entry;
+    }
+
+    private boolean reportNext(Reference<T> reference) {
+        return false;
     }
 }
