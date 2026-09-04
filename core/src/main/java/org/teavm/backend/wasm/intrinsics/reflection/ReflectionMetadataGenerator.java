@@ -235,28 +235,29 @@ public class ReflectionMetadataGenerator {
             }
 
             if (fieldInfoStruct.readerIndex() >= 0) {
-                if (reflection.isRead(field.getReference())) {
+                if (reflection.isRead(field.getReference()) && canGenerateFieldAccessor(field)) {
                     builder.funcRef(generateGetter(field));
                 } else {
                     builder.nullConst(WasmType.FUNC);
                 }
             }
             if (fieldInfoStruct.readerConverterIndex() >= 0) {
-                if (reflection.isRead(field.getReference())) {
+                if (reflection.isRead(field.getReference()) && canGenerateFieldAccessor(field)) {
                     builder.funcRef(getReaderConverter(field.getType()));
                 } else {
                     builder.nullConst(fieldInfoStruct.readerConverterType().getReference());
                 }
             }
             if (fieldInfoStruct.writerIndex() >= 0) {
-                if (reflection.isWritten(field.getReference())) {
+                if (reflection.isWritten(field.getReference()) && canGenerateFieldAccessor(field)) {
                     builder.funcRef(generateSetter(field));
                 } else {
                     builder.nullConst(WasmType.FUNC);
                 }
             }
             if (fieldInfoStruct.writerConverterIndex() >= 0) {
-                if (reflection.isWritten(field.getReference()) && canGenerateWriterConverter(field.getType())) {
+                if (reflection.isWritten(field.getReference()) && canGenerateFieldAccessor(field)
+                        && canGenerateWriterConverter(field.getType())) {
                     builder.funcRef(getWriterConverter(field.getType()));
                 } else {
                     builder.nullConst(fieldInfoStruct.writerConverterType().getReference());
@@ -365,7 +366,7 @@ public class ReflectionMetadataGenerator {
             }
 
             if (methodInfoStruct.callerIndex() >= 0) {
-                if (reflection.isCalled(method.getReference())) {
+                if (reflection.isCalled(method.getReference()) && canGenerateCaller(method)) {
                     var caller = generateCaller(method);
                     builder.funcRef(caller);
                 } else {
@@ -382,6 +383,27 @@ public class ReflectionMetadataGenerator {
         }
 
         builder.arrayNewFixed(methodInfoStruct.array(), count);
+    }
+
+    private boolean canGenerateFieldAccessor(FieldReader field) {
+        return !isExternalReference(field.getType());
+    }
+
+    private boolean canGenerateCaller(MethodReader method) {
+        if (isExternalReference(method.getResultType())) {
+            return false;
+        }
+        for (var parameterType : method.getParameterTypes()) {
+            if (isExternalReference(parameterType)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isExternalReference(ValueType type) {
+        return !(type instanceof ValueType.Primitive) && !(type instanceof ValueType.Void)
+                && typeMapper.mapType(type) == WasmType.EXTERN;
     }
 
     private void generateMethodReflection(WasmInstructionBuilder builder, MethodReader method) {
@@ -884,7 +906,10 @@ public class ReflectionMetadataGenerator {
         function.add(thisVar);
         var argsVar = new WasmLocal(objectArrayClass.getType(), "args");
         function.add(argsVar);
-        var argsDataVar = new WasmLocal(dataField.getUnpackedType(), "argsData");
+        var dataType = (WasmType.CompositeReference) dataField.getUnpackedType();
+        // Async callers are rewritten as resumable functions. Their locals
+        // must be defaultable before the resume prologue restores them.
+        var argsDataVar = new WasmLocal(dataType.asNullable(), "argsData");
         var body = function.getBody().builder();
         var args = new WasmInstructionList().builder();
 
@@ -913,7 +938,6 @@ public class ReflectionMetadataGenerator {
             }
         }
 
-        var dataType = (WasmType.CompositeReference) dataField.getUnpackedType();
         var dataArray = (WasmArray) dataType.composite;
         for (var i = 0; i < method.parameterCount(); ++i) {
             if (i > 0) {
