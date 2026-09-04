@@ -15,9 +15,9 @@
  */
 package org.teavm.classlib.java.lang.ref;
 
-import java.lang.ref.ReferenceQueue;
-import java.lang.ref.WeakReference;
 import org.teavm.classlib.PlatformDetector;
+import org.teavm.interop.Export;
+import org.teavm.interop.Import;
 import org.teavm.interop.Platforms;
 import org.teavm.interop.UnsupportedOn;
 import org.teavm.jso.core.JSFinalizationRegistry;
@@ -87,82 +87,58 @@ public final class TCleaner {
     }
 
     private static final class WasmSupport {
-        private static final ReferenceQueue<Object> queue = new ReferenceQueue<>();
-        private static WasmCleanable first;
-        private static WasmCleanable last;
-        private static boolean workerStarted;
-
         private WasmSupport() {
         }
 
         static Cleanable register(Object obj, Runnable action) {
-            var cleanable = new WasmCleanable(obj, action);
-            cleanable.previous = last;
-            if (last != null) {
-                last.next = cleanable;
-            } else {
-                first = cleanable;
-            }
-            last = cleanable;
-            cleanable.linked = true;
-            if (!workerStarted) {
-                workerStarted = true;
-                var worker = new Thread(WasmSupport::processQueue, "Cleaner");
-                worker.setDaemon(true);
-                worker.start();
-            }
+            var cleanable = new WasmCleanable(action);
+            registerCleanable(obj, cleanable);
             return cleanable;
         }
 
-        private static void processQueue() {
-            while (true) {
-                try {
-                    var cleanable = (WasmCleanable) queue.remove();
-                    try {
-                        cleanable.clean();
-                    } catch (Throwable ignored) {
-                        // Automatic cleaning exceptions must not terminate the cleaner thread.
-                    }
-                } catch (InterruptedException ignored) {
-                    // Cleaner threads are daemons and continue processing after interruption.
-                }
-            }
+        @Import(module = "teavm", name = "registerCleaner")
+        private static native void registerCleanable(Object obj, WasmCleanable cleanable);
+
+        @Import(module = "teavm", name = "unregisterCleaner")
+        private static native boolean unregisterCleanable(WasmCleanable cleanable);
+
+        @Export(name = "teavm.reportGarbageCollectedCleaner")
+        private static void reportGarbageCollectedCleaner(WasmCleanable cleanable) {
+            cleanable.cleanAutomatically();
         }
 
-        private static final class WasmCleanable extends WeakReference<Object> implements Cleanable {
+        private static final class WasmCleanable implements Cleanable {
             private Runnable action;
-            private WasmCleanable previous;
-            private WasmCleanable next;
-            private boolean linked;
 
-            WasmCleanable(Object obj, Runnable action) {
-                super(obj, queue);
+            WasmCleanable(Runnable action) {
                 this.action = action;
             }
 
             @Override
             public void clean() {
-                var action = this.action;
+                var action = takeAction();
                 if (action == null) {
                     return;
                 }
-                this.action = null;
-                if (linked) {
-                    if (previous != null) {
-                        previous.next = next;
-                    } else {
-                        first = next;
-                    }
-                    if (next != null) {
-                        next.previous = previous;
-                    } else {
-                        last = previous;
-                    }
-                    previous = null;
-                    next = null;
-                    linked = false;
-                }
+                unregisterCleanable(this);
                 action.run();
+            }
+
+            void cleanAutomatically() {
+                var action = takeAction();
+                if (action != null) {
+                    try {
+                        action.run();
+                    } catch (Throwable ignored) {
+                        // java.lang.ref.Cleaner ignores exceptions raised by automatic cleanup.
+                    }
+                }
+            }
+
+            private Runnable takeAction() {
+                var action = this.action;
+                this.action = null;
+                return action;
             }
         }
     }

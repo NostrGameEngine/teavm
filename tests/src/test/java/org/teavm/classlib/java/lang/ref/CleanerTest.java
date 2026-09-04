@@ -16,10 +16,8 @@
 package org.teavm.classlib.java.lang.ref;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.lang.ref.Cleaner;
-import java.lang.ref.WeakReference;
 import org.junit.jupiter.api.Test;
 import org.teavm.classlib.support.GCSupport;
 import org.teavm.junit.EachTestCompiledSeparately;
@@ -85,19 +83,19 @@ public class CleanerTest {
     public void gcTriggersClean() throws InterruptedException {
         var cleaner = Cleaner.create();
         var counter = new int[1];
-        var reference = registerForCleanup(cleaner, counter);
-        GCSupport.tryToTriggerGC(reference);
-        assertNull(reference.get());
+        // A suspended WasmGC test fiber can retain all of its locals. Register on a
+        // short-lived thread so the target's frame is gone before forcing collection.
+        var registrationThread = new Thread(() -> {
+            var objectToClean = new Object();
+            cleaner.register(objectToClean, () -> counter[0]++);
+        });
+        registrationThread.start();
+        registrationThread.join();
+        registrationThread = null;
+        GCSupport.tryToTriggerGC();
         for (var i = 0; i < 20 && counter[0] == 0; ++i) {
             Thread.sleep(50);
         }
-        assertEquals(1, counter[0]);
-    }
-
-    private WeakReference<Object> registerForCleanup(Cleaner cleaner, int[] counter) {
-        var obj = new Object();
-        var reference = new WeakReference<>(obj);
-        cleaner.register(obj, () -> counter[0]++);
-        return reference;
+        assertEquals("cleaner action was not executed", 1, counter[0]);
     }
 }
