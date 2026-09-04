@@ -404,13 +404,13 @@ public class WasmTypeInference implements WasmInstructionVisitor {
     public void visit(WasmStructNew instruction) {
         popN(instruction.getType().getFields().size());
         depthBeforeLastInstructionOut = typeStack.size();
-        typeStack.add(mapToNullable(instruction.getType().getReference()));
+        typeStack.add(mapToNullable(instruction.getType().getNonNullReference()));
     }
 
     @Override
     public void visit(WasmStructNewDefault instruction) {
         depthBeforeLastInstructionOut = typeStack.size();
-        typeStack.add(mapToNullable(instruction.getType().getReference()));
+        typeStack.add(mapToNullable(instruction.getType().getNonNullReference()));
     }
 
     @Override
@@ -431,14 +431,14 @@ public class WasmTypeInference implements WasmInstructionVisitor {
     public void visit(WasmArrayNewDefault instruction) {
         pop();
         depthBeforeLastInstructionOut = typeStack.size();
-        typeStack.add(instruction.getType().getReference());
+        typeStack.add(mapToNullable(instruction.getType().getNonNullReference()));
     }
 
     @Override
     public void visit(WasmArrayNewFixed instruction) {
         popN(instruction.getSize());
         depthBeforeLastInstructionOut = typeStack.size();
-        typeStack.add(instruction.getType().getReference());
+        typeStack.add(mapToNullable(instruction.getType().getNonNullReference()));
     }
 
     @Override
@@ -470,14 +470,14 @@ public class WasmTypeInference implements WasmInstructionVisitor {
     @Override
     public void visit(WasmFunctionReference instruction) {
         depthBeforeLastInstructionOut = typeStack.size();
-        typeStack.add(instruction.getFunction().getType().getReference());
+        typeStack.add(mapToNullable(instruction.getFunction().getType().getNonNullReference()));
     }
 
     @Override
     public void visit(WasmInt31Reference instruction) {
         pop();
         depthBeforeLastInstructionOut = typeStack.size();
-        typeStack.add(WasmType.I31);
+        typeStack.add(mapToNullable(WasmType.I31.asNonNull()));
     }
 
     @Override

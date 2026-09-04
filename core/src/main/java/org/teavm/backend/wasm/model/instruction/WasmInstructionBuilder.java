@@ -35,6 +35,8 @@ public class WasmInstructionBuilder {
     public final WasmInstructionList list;
     private List<TextLocation> locationStack = new ArrayList<>();
     private TextLocation currentLocation;
+    private WasmSetLocal lastSetLocalInstruction;
+    private WasmType lastSetLocalValueType;
 
     public WasmInstructionBuilder(WasmInstructionList list) {
         this.list = list;
@@ -181,7 +183,7 @@ public class WasmInstructionBuilder {
     }
 
     public WasmInstructionBuilder getLocal(WasmLocal local) {
-        if (list.getLast() instanceof WasmSetLocal) {
+        if (lastSetLocalValueType != null && list.getLast() == lastSetLocalInstruction) {
             var setLocal = (WasmSetLocal) list.getLast();
             if (setLocal.getLocal() == local) {
                 var tee = new WasmTeeLocal(local);
@@ -189,6 +191,13 @@ public class WasmInstructionBuilder {
                 list.getLast().delete();
                 list.add(tee);
                 typeInference.typeStack.add(local.getType());
+                // local.tee produces the declared local type, even when the
+                // stored value has a more specific reference type. Restore
+                // that proven type so enclosing typed blocks stay valid.
+                if (lastSetLocalValueType instanceof WasmType.Reference
+                        && lastSetLocalValueType != local.getType()) {
+                    return cast((WasmType.Reference) lastSetLocalValueType);
+                }
                 return this;
             }
         }
@@ -196,7 +205,15 @@ public class WasmInstructionBuilder {
     }
 
     public WasmInstructionBuilder setLocal(WasmLocal local) {
-        return add(new WasmSetLocal(local));
+        if (isTerminating()) {
+            return this;
+        }
+        var valueType = typeInference.typeStack.get(typeInference.typeStack.size() - 1);
+        var instruction = new WasmSetLocal(local);
+        add(instruction);
+        lastSetLocalInstruction = instruction;
+        lastSetLocalValueType = valueType;
+        return this;
     }
 
     public WasmInstructionBuilder teeLocal(WasmLocal local) {
@@ -446,6 +463,8 @@ public class WasmInstructionBuilder {
     }
 
     public WasmInstructionBuilder add(WasmInstruction instruction) {
+        lastSetLocalInstruction = null;
+        lastSetLocalValueType = null;
         if (!isTerminating()) {
             instruction.setLocation(currentLocation);
             list.add(instruction);
@@ -464,6 +483,8 @@ public class WasmInstructionBuilder {
     }
 
     public WasmInstructionBuilder transferFrom(WasmInstructionList src) {
+        lastSetLocalInstruction = null;
+        lastSetLocalValueType = null;
         if (isTerminating()) {
             return this;
         }
