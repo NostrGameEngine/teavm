@@ -22,7 +22,9 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.teavm.junit.EachTestCompiledSeparately;
+import org.teavm.junit.OnlyPlatform;
 import org.teavm.junit.TeaVMTest;
+import org.teavm.junit.TestPlatform;
 
 @TeaVMTest
 @EachTestCompiledSeparately
@@ -66,6 +68,16 @@ public class ObjectTest {
     }
 
     @Test
+    @OnlyPlatform(TestPlatform.JAVASCRIPT)
+    public void cloneDoesNotRequireReflectiveClassObject() {
+        CloneTarget original = new CloneTarget(23);
+        CloneTarget copy = original.copy();
+
+        assertNotEquals(original, copy);
+        assertEquals(23, copy.value);
+    }
+
+    @Test
     public void toStringWorks() {
         assertTrue(new Object().toString().startsWith("java.lang.Object@"));
         assertTrue(new Object[2].toString().startsWith("[Ljava.lang.Object;@"));
@@ -81,5 +93,21 @@ public class ObjectTest {
         }
         long end = System.currentTimeMillis();
         assertTrue(end - start > 100);
+    }
+
+    private static final class CloneTarget implements Cloneable {
+        private final int value;
+
+        private CloneTarget(int value) {
+            this.value = value;
+        }
+
+        private CloneTarget copy() {
+            try {
+                return (CloneTarget) super.clone();
+            } catch (CloneNotSupportedException exception) {
+                throw new AssertionError(exception);
+            }
+        }
     }
 }
