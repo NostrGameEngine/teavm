@@ -16,7 +16,6 @@
 package org.teavm.backend.wasm.model.instruction;
 
 import static org.junit.Assert.assertSame;
-
 import java.util.List;
 import org.junit.Test;
 import org.teavm.backend.wasm.model.WasmArray;

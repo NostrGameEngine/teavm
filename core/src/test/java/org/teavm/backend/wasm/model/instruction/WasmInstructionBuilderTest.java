@@ -17,7 +17,6 @@ package org.teavm.backend.wasm.model.instruction;
 
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
-
 import org.junit.Test;
 import org.teavm.backend.wasm.model.WasmLocal;
 import org.teavm.backend.wasm.model.WasmStructure;
