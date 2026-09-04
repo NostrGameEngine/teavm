@@ -362,7 +362,12 @@ public class TObject {
         if (PlatformDetector.isWebAssemblyGC()) {
             return cloneObject();
         }
-        var cls = ((TClass<?>) (Object) getClass()).getClassInfo();
+        // Cloning only needs the runtime class metadata to distinguish arrays
+        // from regular objects. Going through Class here unnecessarily
+        // requires a reflective Class object, which may not exist in a
+        // closed-world JavaScript build even though the concrete type and its
+        // public clone() method are reachable.
+        var cls = getObjectClassInfo(this);
         if (!(this instanceof TCloneable) && cls.itemType() == null) {
             throw new TCloneNotSupportedException();
         }
