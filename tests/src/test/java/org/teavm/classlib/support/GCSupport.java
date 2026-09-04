@@ -65,6 +65,11 @@ public final class GCSupport {
             var div = doc.createElement("div");
             div.appendChild(doc.createTextNode("hello"));
             doc.getBody().appendChild(div);
+            // A WeakRef target is kept alive until the end of the JavaScript job in
+            // which the reference is created or dereferenced. Yield before asking
+            // the host to collect, then yield again so FinalizationRegistry jobs can
+            // report cleared references back to TeaVM before the test inspects them.
+            waitImpl();
             triggerGCInJS();
             waitImpl();
         } else {
@@ -79,7 +84,7 @@ public final class GCSupport {
         Window.setTimeout(() -> callback.complete(null), 500);
     }
 
-    @JSBody(script = "if (typeof window.gc === 'function') { window.gc(); }")
+    @JSBody(script = "if (typeof globalThis.gc === 'function') { globalThis.gc(); }")
     private static native void triggerGCInJS();
 
     private static Tree generateTree(String path) {

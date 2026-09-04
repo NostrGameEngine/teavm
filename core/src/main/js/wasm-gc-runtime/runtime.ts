@@ -416,6 +416,12 @@ function coreImports(imports: Record<string, unknown>, context: Context): void {
             (report as Function)(heldValue);
         }
     });
+    const cleanerFinalizationRegistry = new FinalizationRegistry<unknown>(cleanable => {
+        const report = context.exports?.["teavm.reportGarbageCollectedCleaner"];
+        if (typeof report === "function") {
+            (report as Function)(cleanable);
+        }
+    });
     imports.teavm = {
         createWeakRef(value: object, ref: unknown, queue: unknown) {
             if (queue !== null) {
@@ -432,6 +438,12 @@ function coreImports(imports: Record<string, unknown>, context: Context): void {
             return new WeakRef(value);
         },
         stringDeref: (weakRef: WeakRef<object>) => weakRef.deref(),
+        registerCleaner(value: object, cleanable: object) {
+            cleanerFinalizationRegistry.register(value, cleanable, cleanable);
+        },
+        unregisterCleaner(cleanable: object) {
+            return cleanerFinalizationRegistry.unregister(cleanable);
+        },
         takeStackTrace(exceptionClassName: string | null) {
             const stack = new Error().stack ?? "";
             const addresses: number[] = [];

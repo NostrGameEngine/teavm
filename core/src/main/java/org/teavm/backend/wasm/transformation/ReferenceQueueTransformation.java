@@ -22,9 +22,7 @@ import org.teavm.model.ClassHolderTransformerContext;
 import org.teavm.model.FieldReference;
 import org.teavm.model.MethodHolder;
 import org.teavm.model.MethodReader;
-import org.teavm.model.MethodReference;
 import org.teavm.model.instructions.GetFieldInstruction;
-import org.teavm.model.instructions.InvokeInstruction;
 import org.teavm.model.instructions.PutFieldInstruction;
 import org.teavm.model.util.ModelUtils;
 import org.teavm.model.util.ProgramUtils;
@@ -40,7 +38,7 @@ public class ReferenceQueueTransformation implements ClassHolderTransformer {
     private void transformReferenceQueue(ClassHolder cls, ClassHolderTransformerContext context) {
         var templateClass = context.getHierarchy().getClassSource().get(ReferenceQueueTemplate.class.getName());
         for (var method : templateClass.getMethods()) {
-            if (!method.getName().equals("<init>") && !method.getName().equals("reportNext")) {
+            if (!method.getName().equals("<init>")) {
                 copyMethod(cls, method);
             }
         }
@@ -68,12 +66,6 @@ public class ReferenceQueueTransformation implements ClassHolderTransformer {
                 } else if (instruction instanceof PutFieldInstruction) {
                     var putField = (PutFieldInstruction) instruction;
                     putField.setField(mapField(putField.getField()));
-                } else if (instruction instanceof InvokeInstruction) {
-                    var invoke = (InvokeInstruction) instruction;
-                    if (invoke.getMethod().getClassName().equals(ReferenceQueueTemplate.class.getName())) {
-                        invoke.setMethod(new MethodReference(ReferenceQueue.class.getName(),
-                                invoke.getMethod().getDescriptor()));
-                    }
                 }
             }
         }
