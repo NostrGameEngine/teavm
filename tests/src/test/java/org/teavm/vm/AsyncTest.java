@@ -27,6 +27,7 @@ import org.teavm.classlib.PlatformDetector;
 import org.teavm.interop.Async;
 import org.teavm.interop.AsyncCallback;
 import org.teavm.jso.browser.Window;
+import org.teavm.jso.core.JSError;
 import org.teavm.jso.core.JSPromise;
 import org.teavm.jso.core.JSString;
 import org.teavm.junit.EachTestCompiledSeparately;
@@ -186,6 +187,19 @@ public class AsyncTest {
     }
 
     private static synchronized void dummySyncStaticMethod() {
+    }
+
+    @Test
+    @SkipPlatform(TestPlatform.C)
+    public void awaitRejectedNativePromise() {
+        var promise = JSPromise.<String>reject(new JSError("native rejection"));
+        try {
+            promise.await();
+        } catch (RuntimeException e) {
+            assertEquals("native rejection", e.getMessage());
+            return;
+        }
+        throw new AssertionError("Rejected promise should throw");
     }
 
     @Async

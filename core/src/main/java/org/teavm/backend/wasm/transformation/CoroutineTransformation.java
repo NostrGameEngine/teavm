@@ -117,6 +117,11 @@ public class CoroutineTransformation {
         builder
                 .call(coroutineFunctions.currentFiber())
                 .teeLocal(fiberLocal)
+                .isNull();
+        var resumeCheck = builder.conditional(WasmType.INT32);
+        resumeCheck.getThenBlock().builder().i32Const(0);
+        resumeCheck.getElseBlock().builder()
+                .getLocal(fiberLocal)
                 .call(coroutineFunctions.isResuming());
         var restoreCond = builder.conditional(WasmType.INT32);
         restoreCond.getThenBlock().builder()
@@ -578,8 +583,13 @@ public class CoroutineTransformation {
     }
 
     private void emitIsSuspending(WasmInstructionList list, TextLocation location) {
-        list.add(new WasmGetLocal(fiberLocal), location);
-        list.add(new WasmCall(coroutineFunctions.isSuspending()), location);
+        var builder = list.builder();
+        builder.getLocal(fiberLocal).isNull();
+        var suspensionCheck = builder.conditional(WasmType.INT32);
+        suspensionCheck.getThenBlock().builder().i32Const(0);
+        suspensionCheck.getElseBlock().builder()
+                .getLocal(fiberLocal)
+                .call(coroutineFunctions.isSuspending());
     }
 
     private class BreakTargetCollector extends WasmDefaultInstructionVisitor {
