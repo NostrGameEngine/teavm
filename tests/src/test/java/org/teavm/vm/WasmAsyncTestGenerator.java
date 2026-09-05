@@ -48,6 +48,9 @@ public class WasmAsyncTestGenerator implements WasmGCBodyIntrinsic {
             case "teeThenSuspend":
                 generateTeeThenSuspend(function);
                 break;
+            case "nonNullThenSuspend":
+                generateNonNullThenSuspend(function, addParam(function));
+                break;
         }
     }
 
@@ -104,6 +107,20 @@ public class WasmAsyncTestGenerator implements WasmGCBodyIntrinsic {
                 .setLocal(sum)
                 .call(lengthOfFn(), false)
                 .getLocal(sum)
+                .intBinary(WasmIntType.INT32, WasmIntBinaryOperation.ADD);
+    }
+
+    private void generateNonNullThenSuspend(WasmFunction function, WasmLocal param) {
+        var type = context.classInfoProvider().getClassInfo("java.lang.Throwable").getType();
+        var sum = new WasmLocal(WasmType.INT32, "sum");
+        function.add(sum);
+        var builder = function.getBody().builder();
+        builder.call(newExceptionFn(), false).cast(type.asNonNull())
+                .i32Const(0).getLocal(param).call(sumFn(), true);
+        var conditional = builder.conditional(WasmType.INT32);
+        conditional.getThenBlock().builder().i32Const(20).i32Const(25).call(sumFn(), true);
+        conditional.getElseBlock().builder().i32Const(30).i32Const(35).call(sumFn(), true);
+        builder.setLocal(sum).call(lengthOfFn(), false).getLocal(sum)
                 .intBinary(WasmIntType.INT32, WasmIntBinaryOperation.ADD);
     }
 

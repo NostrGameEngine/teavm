@@ -370,7 +370,13 @@ public class CoroutineTransformation {
                 boolean isCallRef) {
             var depthWithoutArgs = typeInference.getDepthBeforeLastInstructionOut();
             var restoreBlock = new WasmBlock(false);
-            var signature = new WasmSignature(mapToNullableTypes(stackSnapshot), mapToNullableTypes(inputTypes));
+            var restoredTypes = mapToNullableTypes(stackSnapshot);
+            // Only the dummy call arguments may be null on resumption. Values below
+            // them are restored from the fiber with their original reference types.
+            for (var i = 0; i < depthWithoutArgs; ++i) {
+                restoredTypes.set(i, stackSnapshot.get(i));
+            }
+            var signature = new WasmSignature(restoredTypes, mapToNullableTypes(inputTypes));
             restoreBlock.setType(functionTypes.get(signature).asBlock());
             restoreBlock.setLocation(location);
 
@@ -409,7 +415,9 @@ public class CoroutineTransformation {
                 check.getThenBlock().add(new WasmGetLocal(savedFunctionLocal()));
                 coroutineFunctions.saveValue(callRefType, check.getThenBlock(), fiberLocal, location);
             }
-            var condTypes = mapToNullableTypes(typeInference.typeStack.subList(minDepth,
+            // The non-suspending path leaves the live stack unchanged, including
+            // non-null references required by enclosing block/branch signatures.
+            var condTypes = List.copyOf(typeInference.typeStack.subList(minDepth,
                     typeInference.typeStack.size()));
             if (!condTypes.isEmpty()) {
                 check.setType(functionTypes.get(new WasmSignature(condTypes, condTypes)).asBlock());
