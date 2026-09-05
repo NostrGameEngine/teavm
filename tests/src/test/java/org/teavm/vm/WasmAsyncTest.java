@@ -79,6 +79,12 @@ public class WasmAsyncTest {
     }
 
     @Test
+    public void suspendWithNonNullValueBelowConditional() {
+        assertEquals(54, nonNullThenSuspend(1));
+        assertEquals(74, nonNullThenSuspend(0));
+    }
+
+    @Test
     public void resumesAfterPassingTypedArrayToPromiseCallback() {
         assertEquals("4", typedArrayLength(new byte[] { 1, 2, 3, 4 }));
     }
@@ -178,6 +184,11 @@ public class WasmAsyncTest {
     @NativeAsync
     @Intrinsified
     private static native int teeThenSuspend();
+
+    @Async
+    @NativeAsync
+    @Intrinsified
+    private static native int nonNullThenSuspend(int condition);
 
     static RuntimeException newException() {
         return new RuntimeException("generated");

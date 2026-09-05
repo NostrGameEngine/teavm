@@ -116,6 +116,18 @@ public class AsyncTest {
     }
 
     @Test
+    public void nonNullStackValueSurvivesSuspendingConditional() {
+        for (var i = 0; i < 2; ++i) {
+            assertEquals("prefix:" + i, combine("prefix:",
+                    returnSamePrimitive(i) == 0 ? returnSamePrimitive("0") : returnSamePrimitive("1")));
+        }
+    }
+
+    private static String combine(String prefix, String suffix) {
+        return prefix.concat(suffix);
+    }
+
+    @Test
     public void collectionAddAll() {
         var list = new ArrayList<>() {
             @Override
