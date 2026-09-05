@@ -158,7 +158,7 @@ public class WasmGCDependencies {
                 void.class)).use();
 
         var offerMethod = analyzer.linkMethod(new MethodReference(EventQueue.class, "offer", EventQueue.Event.class,
-                long.class, int.class));
+                long.class, int.class, int.class));
         var runEventMethod = analyzer.linkMethod(new MethodReference(EventQueue.class, "run", EventQueue.Event.class,
                 void.class));
 

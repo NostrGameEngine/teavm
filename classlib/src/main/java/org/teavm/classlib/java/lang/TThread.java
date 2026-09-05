@@ -31,7 +31,7 @@ public class TThread extends TObject implements TRunnable {
     private static UncaughtExceptionHandler defaultUncaughtExceptionHandler = new TDefaultUncaughtExceptionHandler();
     private UncaughtExceptionHandler uncaughtExceptionHandler;
     private long id;
-    private int priority;
+    private int priority = 5;
     private boolean daemon;
     private long timeSliceStart;
     private int yieldCount;
@@ -57,6 +57,9 @@ public class TThread extends TObject implements TRunnable {
     }
 
     public TThread(TRunnable target, String name) {
+        if (currentThread != null) {
+            priority = currentThread.priority;
+        }
         this.name = name;
         this.target = target;
         id = nextId++;
@@ -68,7 +71,7 @@ public class TThread extends TObject implements TRunnable {
             if (!daemon) {
                 Fiber.userThreadCount++;
             }
-            EventQueue.offer(() -> Fiber.start(this::runThread, daemon));
+            EventQueue.offer(() -> Fiber.start(this::runThread, daemon), System.currentTimeMillis(), priority);
         } else {
             Platform.startThread(this::runThread);
         }
@@ -150,6 +153,12 @@ public class TThread extends TObject implements TRunnable {
 
     public static void yield() {
         TThread currentThread = currentThread();
+        if (PlatformDetector.isWebAssemblyGC()) {
+            if (System.currentTimeMillis() - currentThread.timeSliceStart >= EventQueue.timeSlice()) {
+                switchContext(currentThread);
+            }
+            return;
+        }
         if (++currentThread.yieldCount < 30) {
             return;
         }
@@ -167,7 +176,7 @@ public class TThread extends TObject implements TRunnable {
             EventQueue.offer(() -> {
                 setCurrentThread(thread);
                 callback.complete(null);
-            });
+            }, System.currentTimeMillis(), thread.priority);
         } else {
             Platform.postpone(() -> {
                 setCurrentThread(thread);
@@ -221,7 +230,7 @@ public class TThread extends TObject implements TRunnable {
             if (current.interruptedFlag) {
                 handler.interrupted();
             } else {
-                handler.scheduleId = EventQueue.offer(handler, System.currentTimeMillis() + millis);
+                handler.scheduleId = EventQueue.offer(handler, System.currentTimeMillis() + millis, current.priority);
                 current.interruptHandler = handler;
             }
         } else {
@@ -266,6 +275,9 @@ public class TThread extends TObject implements TRunnable {
     }
 
     public final void setPriority(int newPriority) {
+        if (newPriority < 1 || newPriority > 10) {
+            throw new IllegalArgumentException();
+        }
         this.priority = newPriority;
     }
 

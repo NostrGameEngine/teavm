@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+import { createScheduler, SchedulerOptions } from "./scheduler";
+
 // --- Interfaces ---
 
 interface Context {
@@ -41,6 +43,7 @@ export interface TeaVMInstance {
 }
 
 export interface LoadOptions {
+    scheduler?: SchedulerOptions;
     nodejs?: boolean;
     emscriptenModules?: Record<string, EmscriptenModulePath>;
     stackDeobfuscator?: DeobfuscatorOptions;
@@ -126,7 +129,8 @@ function setGlobalName(name: string, value: unknown): void {
 export function defaults(
     imports: Record<string, unknown>,
     userExports: Record<string, unknown>,
-    stringBuiltins: boolean
+    stringBuiltins: boolean,
+    schedulerOptions?: SchedulerOptions
 ): DefaultsResult {
     const context: Context = {
         exports: null!,
@@ -139,7 +143,7 @@ export function defaults(
     dateImports(imports);
     consoleImports(imports);
     coreImports(imports, context);
-    asyncImports(imports);
+    imports.teavmAsync = createScheduler(schedulerOptions);
     jsoImports(imports, context, stringBuiltins);
     imports.teavmMath = Math;
     return {
@@ -495,18 +499,6 @@ function coreImports(imports: Record<string, unknown>, context: Context): void {
         },
         decorateException(javaException: unknown) {
             new JavaError(context, javaException);
-        }
-    };
-}
-
-function asyncImports(imports: Record<string, unknown>): void {
-    imports.teavmAsync = {
-        offer(instance: unknown, fn: (instance: unknown) => void, time: number) {
-            const dt = Math.max(0, time - Date.now());
-            return setTimeout(() => { fn(instance); }, dt);
-        },
-        kill(id: ReturnType<typeof setTimeout>) {
-            clearTimeout(id);
         }
     };
 }
@@ -1023,7 +1015,7 @@ export async function load(src: string | BufferSource, options?: LoadOptions): P
 
     const importObj: WebAssembly.Imports = {};
     const userExports: Record<string, unknown> = {};
-    const defaultsResult = defaults(importObj, userExports, await hasStringBuiltins());
+    const defaultsResult = defaults(importObj, userExports, await hasStringBuiltins(), options.scheduler);
     const allocator = await linkImports(importObj, options, module, emscriptenModules);
     if (typeof options.installImports !== "undefined") {
         options.installImports(importObj);

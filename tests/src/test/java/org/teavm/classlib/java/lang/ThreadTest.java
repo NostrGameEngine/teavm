@@ -30,6 +30,26 @@ import org.teavm.junit.TeaVMTestRunner;
 @EachTestCompiledSeparately
 public class ThreadTest {
     @Test
+    public void priorityIsInheritedAndValidated() {
+        Thread current = Thread.currentThread();
+        int previous = current.getPriority();
+        try {
+            current.setPriority(7);
+            assertEquals(7, new Thread().getPriority());
+            for (int priority : new int[] {0, 11}) {
+                try {
+                    current.setPriority(priority);
+                    fail("Invalid thread priority accepted");
+                } catch (IllegalArgumentException expected) {
+                    assertEquals(7, current.getPriority());
+                }
+            }
+        } finally {
+            current.setPriority(previous);
+        }
+    }
+
+    @Test
     public void sleeps() throws InterruptedException {
         long start = System.currentTimeMillis();
         Thread.sleep(100);
