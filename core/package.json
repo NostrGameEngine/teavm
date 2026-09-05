@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "test:scheduler": "node --test src/test/js/scheduler.test.mjs",
     "uglify": "uglifyjs",
     "esbuild": "esbuild",
     "typecheck": "tsc"

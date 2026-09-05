@@ -38,8 +38,12 @@ public final class EventQueue {
     }
 
     public static int offer(Event action, long time) {
+        return offer(action, time, 5);
+    }
+
+    public static int offer(Event action, long time, int priority) {
         if (PlatformDetector.isWebAssemblyGC()) {
-            return offerWasmGC(action, time);
+            return offerWasmGC(action, time, priority);
         }
         ensureCapacity(size + 1);
         int current = size;
@@ -62,13 +66,20 @@ public final class EventQueue {
     }
 
     @Intrinsified
-    private static native int offerWasmGC(Event action, double time);
+    private static native int offerWasmGC(Event action, double time, int priority);
+
+    @Import(name = "timeSlice", module = "teavmAsync")
+    public static native int timeSlice();
 
     private static void run(Event action) {
         action.run();
     }
 
     public static void kill(int id) {
+        if (PlatformDetector.isWebAssemblyGC()) {
+            killWasmGC(id);
+            return;
+        }
         for (int i = 0; i < size; ++i) {
             if (data[i].id == id) {
                 remove(i);
@@ -78,7 +89,7 @@ public final class EventQueue {
     }
 
     @Import(name = "kill", module = "teavmAsync")
-    private static native int killWasmGC(int id);
+    private static native void killWasmGC(int id);
 
     public static void process() {
         while (size > 0 && !finished) {
