@@ -35,6 +35,27 @@ import org.teavm.junit.TeaVMTest;
 public class SystemTest {
     private Object[] covariantDestination;
 
+    @Test(expected = ArrayStoreException.class)
+    public void rejectsNonArraySource() {
+        System.arraycopy(new Object(), 0, new Object[0], 0, 0);
+    }
+
+    @Test(expected = ArrayStoreException.class)
+    public void rejectsNonArrayDestination() {
+        System.arraycopy(new Object[0], 0, new Object(), 0, 0);
+    }
+
+    @Test(expected = ArrayStoreException.class)
+    public void rejectsIdenticalNonArrayArguments() {
+        Object value = new Object();
+        System.arraycopy(value, 0, value, 0, 0);
+    }
+
+    @Test(expected = ArrayStoreException.class)
+    public void rejectsEmptyCopyBetweenPrimitiveAndReferenceArrays() {
+        System.arraycopy(new int[0], 0, new Object[0], 0, 0);
+    }
+
     @Test
     public void checksRuntimeComponentTypeForCovariantParameter() {
         Object[] source = { "first", 42, "last" };
