@@ -25,6 +25,46 @@ import org.teavm.junit.TeaVMTest;
 @TeaVMTest
 public class LongTest {
     private static volatile long constantInput;
+    private static volatile long comparisonLeft;
+    private static volatile long comparisonRight;
+    private static volatile int comparisonCalls;
+
+    @Test
+    public void comparesLoadedLongsAcrossTheSignedRange() {
+        long[] sorted = { Long.MIN_VALUE, Long.MIN_VALUE + 1, -9007199254740993L,
+                -1, 0, 1, 9007199254740993L, Long.MAX_VALUE - 1, Long.MAX_VALUE };
+        for (int i = 0; i < sorted.length; ++i) {
+            for (int j = 0; j < sorted.length; ++j) {
+                comparisonLeft = sorted[i];
+                comparisonRight = sorted[j];
+                long left = comparisonLeft;
+                long right = comparisonRight;
+                assertEquals(i == j, left == right);
+                assertEquals(i != j, left != right);
+                assertEquals(i < j, left < right);
+                assertEquals(i <= j, left <= right);
+                assertEquals(i > j, left > right);
+                assertEquals(i >= j, left >= right);
+                assertEquals(i <= j, !(left > right));
+                assertEquals(i > j, (left > right) && (left != right));
+            }
+        }
+    }
+
+    @Test
+    public void comparisonEvaluatesEachOperandOnce() {
+        comparisonCalls = 0;
+        assertTrue(comparisonOperand(1L) < comparisonOperand(2L));
+        assertEquals(2, comparisonCalls);
+        comparisonCalls = 0;
+        assertTrue(comparisonOperand(Long.MIN_VALUE) != comparisonOperand(Long.MAX_VALUE));
+        assertEquals(2, comparisonCalls);
+    }
+
+    private static long comparisonOperand(long value) {
+        ++comparisonCalls;
+        return value;
+    }
 
     @Test
     public void exactConstantsBeyondDoublePrecision() {

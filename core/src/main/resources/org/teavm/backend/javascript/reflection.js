@@ -33,6 +33,11 @@ let $rt_isAssignable = (from, to) => {
     if (from === to) {
         return true;
     }
+    let interfaceId = to[$rt_meta].interfaceId;
+    let interfaceMask = from[$rt_meta].interfaceMask;
+    if (interfaceId >= 0 && interfaceMask !== null) {
+        return (interfaceMask[interfaceId >>> 5] & (1 << (interfaceId & 31))) !== 0;
+    }
     let map = from[$rt_meta].assignableCache;
     if (map === null) {
         map = new Map();
