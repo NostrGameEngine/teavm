@@ -408,7 +408,7 @@ public final class JS {
         }
         var result = new JSArray<JSString>(array.length);
         for (int i = 0; i < array.length; ++i) {
-            result.set(i, JSString.valueOf(array[i]));
+            setStringArrayElement(result, i, array[i]);
         }
         return result;
     }
@@ -765,10 +765,18 @@ public final class JS {
         }
         String[] result = new String[array.getLength()];
         for (int i = 0; i < result.length; ++i) {
-            result[i] = array.get(i).stringValue();
+            JSObject value = getStringArrayElement(array, i);
+            result[i] = value != null ? ((JSString) value).stringValue() : null;
         }
         return result;
     }
+
+    @JSBody(params = { "array", "index", "value" }, script = "array[index] = value;")
+    private static native void setStringArrayElement(JSArray<JSString> array, int index, String value);
+
+    @JSBody(params = { "array", "index" }, script = "return array[index];")
+    @NoSideEffects
+    private static native JSObject getStringArrayElement(JSArrayReader<JSString> array, int index);
 
     public static UnwrapFunction<JSArrayReader<JSString>, String[]> stringArrayUnwrapper() {
         return JS::unwrapStringArray;
