@@ -459,17 +459,106 @@ public final class TCollections extends TObject {
 
     public static <T> TList<T> unmodifiableList(final TList<? extends T> list) {
         TObjects.requireNonNull(list);
-        return new TAbstractList<>() {
-            @Override public T get(int index) {
-                return list.get(index);
-            }
-            @Override public int size() {
-                return list.size();
-            }
-            @Override public boolean remove(Object o) {
-                throw new UnsupportedOperationException();
-            }
-        };
+        return list instanceof TRandomAccess ? new UnmodifiableRandomAccessList<>(list)
+                : new UnmodifiableList<>(list);
+    }
+
+    private static class UnmodifiableList<T> extends TAbstractList<T> {
+        private final TList<? extends T> list;
+
+        UnmodifiableList(TList<? extends T> list) {
+            this.list = list;
+        }
+
+        @Override
+        public T get(int index) {
+            return list.get(index);
+        }
+
+        @Override
+        public int size() {
+            return list.size();
+        }
+
+        @Override
+        public boolean contains(Object value) {
+            return list.contains(value);
+        }
+
+        @Override
+        public int indexOf(Object value) {
+            return list.indexOf(value);
+        }
+
+        @Override
+        public int lastIndexOf(Object value) {
+            return list.lastIndexOf(value);
+        }
+
+        @Override
+        public Object[] toArray() {
+            return list.toArray();
+        }
+
+        @Override
+        public <S> S[] toArray(S[] array) {
+            return list.toArray(array);
+        }
+
+        @Override
+        public TIterator<T> iterator() {
+            return unmodifiableIterator(list.iterator());
+        }
+
+        @Override
+        public TListIterator<T> listIterator(int index) {
+            TListIterator<? extends T> iterator = list.listIterator(index);
+            return new TListIterator<>() {
+                @Override public boolean hasNext() {
+                    return iterator.hasNext();
+                }
+                @Override public T next() {
+                    return iterator.next();
+                }
+                @Override public boolean hasPrevious() {
+                    return iterator.hasPrevious();
+                }
+                @Override public T previous() {
+                    return iterator.previous();
+                }
+                @Override public int nextIndex() {
+                    return iterator.nextIndex();
+                }
+                @Override public int previousIndex() {
+                    return iterator.previousIndex();
+                }
+                @Override public void remove() {
+                    throw new TUnsupportedOperationException();
+                }
+                @Override public void set(T value) {
+                    throw new TUnsupportedOperationException();
+                }
+                @Override public void add(T value) {
+                    throw new TUnsupportedOperationException();
+                }
+            };
+        }
+
+        @Override
+        public TList<T> subList(int fromIndex, int toIndex) {
+            return unmodifiableList(list.subList(fromIndex, toIndex));
+        }
+
+        @Override
+        public boolean remove(Object value) {
+            throw new TUnsupportedOperationException();
+        }
+    }
+
+    private static class UnmodifiableRandomAccessList<T> extends UnmodifiableList<T> implements TRandomAccess {
+        UnmodifiableRandomAccessList(TList<? extends T> list) {
+            super(list);
+        }
     }
 
     public static <T> TCollection<T> unmodifiableCollection(final TCollection<? extends T> c) {
@@ -528,16 +617,13 @@ public final class TCollections extends TObject {
     public static <K, V> TMap<K, V> unmodifiableMap(final TMap<? extends K, ? extends V> m) {
         TObjects.requireNonNull(m);
         return new TAbstractMap<>() {
-            private TSet<Entry<K, V>> entrySetCache;
+            private TSet<Entry<K, V>> entries;
 
-            @Override public TSet<Entry<K, V>> entrySet() {
-                if (entrySetCache == null) {
-                    entrySetCache = unmodifiableMapEntrySet(m.entrySet());
-                }
-                return entrySetCache;
+            @Override public int size() {
+                return m.size();
             }
-            @Override public V remove(Object o) {
-                throw new UnsupportedOperationException();
+            @Override public boolean isEmpty() {
+                return m.isEmpty();
             }
             @Override public boolean containsKey(Object key) {
                 return m.containsKey(key);
@@ -545,14 +631,29 @@ public final class TCollections extends TObject {
             @Override public boolean containsValue(Object value) {
                 return m.containsValue(value);
             }
-            @Override public int size() {
-                return m.size();
-            }
             @Override public V get(Object key) {
                 return m.get(key);
             }
-            @Override public boolean isEmpty() {
-                return m.isEmpty();
+            @Override public TSet<Entry<K, V>> entrySet() {
+                if (entries == null) {
+                    entries = unmodifiableMapEntrySet(m.entrySet());
+                }
+                return entries;
+            }
+            @Override public TSet<K> keySet() {
+                if (cachedKeySet == null) {
+                    cachedKeySet = unmodifiableSet(m.keySet());
+                }
+                return cachedKeySet;
+            }
+            @Override public TCollection<V> values() {
+                if (cachedValues == null) {
+                    cachedValues = unmodifiableCollection(m.values());
+                }
+                return cachedValues;
+            }
+            @Override public V remove(Object o) {
+                throw new TUnsupportedOperationException();
             }
         };
     }
