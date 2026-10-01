@@ -16,8 +16,46 @@
 "use strict";
 
 let $rt_createArray = (cls, sz) => {
-    let data = new teavm_globals.Array(sz);
-    data.fill(null);
+    // Array literals keep small reference arrays packed without growing a push buffer.
+    let data;
+    switch (sz) {
+        case 0:
+            data = [];
+            break;
+        case 1:
+            data = [null];
+            break;
+        case 2:
+            data = [null, null];
+            break;
+        case 3:
+            data = [null, null, null];
+            break;
+        case 4:
+            data = [null, null, null, null];
+            break;
+        case 5:
+            data = [null, null, null, null, null];
+            break;
+        case 6:
+            data = [null, null, null, null, null, null];
+            break;
+        case 7:
+            data = [null, null, null, null, null, null, null];
+            break;
+        case 8:
+            data = [null, null, null, null, null, null, null, null];
+            break;
+        case 9:
+            data = [null, null, null, null, null, null, null, null, null];
+            break;
+        case 10:
+            data = [null, null, null, null, null, null, null, null, null, null];
+            break;
+        default:
+            data = new teavm_globals.Array(sz);
+            data.fill(null);
+    }
     return new ($rt_arraycls(cls))(data);
 }
 let $rt_wrapArray = (cls, data) => new ($rt_arraycls(cls))(data);
@@ -75,49 +113,48 @@ let $rt_createDoubleArrayFromData = data => {
 
 let $rt_arraycls = cls => {
     let result = cls[$rt_meta].arrayType;
-    if (result === null) {
-        function JavaArray(data) {
-            $rt_objcls().call(this);
-            this.data = data;
-        }
-        JavaArray.prototype = teavm_globals.Object.create($rt_objcls().prototype);
-        JavaArray.prototype.type = cls;
-        JavaArray.prototype.constructor = JavaArray;
-        JavaArray.prototype.toString = function() {
-            let str = "[";
-            for (let i = 0; i < this.data.length; ++i) {
-                if (i > 0) {
-                    str += ", ";
-                }
-                str += this.data[i].toString();
-            }
-            str += "]";
-            return str;
-        };
-        JavaArray.prototype[teavm_javaVirtualMethod('clone()Ljava/lang/Object;')] = function() {
-            let dataCopy;
-            if ('slice' in this.data) {
-                dataCopy = this.data.slice();
-            } else {
-                dataCopy = new this.data.constructor(this.data.length);
-                for (let i = 0; i < dataCopy.length; ++i) {
-                    dataCopy[i] = this.data[i];
-                }
-            }
-            return new ($rt_arraycls(this.type))(dataCopy);
-        };
-        let name = "[" + cls[$rt_meta].binaryName;
-        JavaArray[$rt_meta] = $rt_newClassMetadata({
-            name: name,
-            binaryName: name,
-            parent: $rt_objcls(),
-            itemType: cls
-        });
-
-        result = JavaArray;
-        cls[$rt_meta].arrayType = JavaArray;
+    return result !== null ? result : $rt_createArrayClass(cls);
+}
+let $rt_createArrayClass = cls => {
+    function JavaArray(data) {
+        $rt_objcls().call(this);
+        this.data = data;
     }
-    return result;
+    JavaArray.prototype = teavm_globals.Object.create($rt_objcls().prototype);
+    JavaArray.prototype.type = cls;
+    JavaArray.prototype.constructor = JavaArray;
+    JavaArray.prototype.toString = function() {
+        let str = "[";
+        for (let i = 0; i < this.data.length; ++i) {
+            if (i > 0) {
+                str += ", ";
+            }
+            str += this.data[i].toString();
+        }
+        str += "]";
+        return str;
+    };
+    JavaArray.prototype[teavm_javaVirtualMethod('clone()Ljava/lang/Object;')] = function() {
+        let dataCopy;
+        if ('slice' in this.data) {
+            dataCopy = this.data.slice();
+        } else {
+            dataCopy = new this.data.constructor(this.data.length);
+            for (let i = 0; i < dataCopy.length; ++i) {
+                dataCopy[i] = this.data[i];
+            }
+        }
+        return new ($rt_arraycls(this.type))(dataCopy);
+    };
+    let name = "[" + cls[$rt_meta].binaryName;
+    JavaArray[$rt_meta] = $rt_newClassMetadata({
+        name: name,
+        binaryName: name,
+        parent: $rt_objcls(),
+        itemType: cls
+    });
+    cls[$rt_meta].arrayType = JavaArray;
+    return JavaArray;
 }
 let $rt_createMultiArray = (cls, dimensions) => {
     let first = 0;

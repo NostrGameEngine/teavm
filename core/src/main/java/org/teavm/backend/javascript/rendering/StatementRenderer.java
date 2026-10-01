@@ -1295,11 +1295,25 @@ public class StatementRenderer implements ExprVisitor, StatementVisitor {
                     break;
             }
         } else {
-            writer.appendFunction("$rt_createArray").append("(");
+            Object length = expr.getLength() instanceof ConstantExpr
+                    ? ((ConstantExpr) expr.getLength()).getValue() : null;
+            boolean smallConstant = length instanceof Integer && (Integer) length >= 0 && (Integer) length <= 10;
+            writer.appendFunction(smallConstant ? "$rt_wrapArray" : "$rt_createArray").append("(");
             RenderingUtil.typeToClsString(writer, expr.getType());
             writer.append(",").ws();
-            precedence = Precedence.min();
-            expr.getLength().acceptVisitor(this);
+            if (smallConstant) {
+                writer.append('[');
+                for (int i = 0; i < (Integer) length; ++i) {
+                    if (i > 0) {
+                        writer.append(',').ws();
+                    }
+                    writer.append("null");
+                }
+                writer.append(']');
+            } else {
+                precedence = Precedence.min();
+                expr.getLength().acceptVisitor(this);
+            }
             writer.append(")");
         }
         if (expr.getLocation() != null) {
