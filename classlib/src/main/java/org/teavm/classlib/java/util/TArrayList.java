@@ -43,9 +43,14 @@ public class TArrayList<E> extends TAbstractList<E> implements TCloneable, TSeri
 
     public TArrayList(TCollection<? extends E> c) {
         this(c.size());
-        TIterator<? extends E> iter = c.iterator();
-        for (int i = 0; i < array.length; ++i) {
-            array[i] = iter.next();
+        if (c.getClass() == TArrayList.class) {
+            TArrayList<?> source = (TArrayList<?>) c;
+            System.arraycopy(source.array, 0, array, 0, array.length);
+        } else {
+            TIterator<? extends E> iter = c.iterator();
+            for (int i = 0; i < array.length; ++i) {
+                array[i] = iter.next();
+            }
         }
         size = array.length;
     }

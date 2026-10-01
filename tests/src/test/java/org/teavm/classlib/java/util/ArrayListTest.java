@@ -39,6 +39,49 @@ import org.teavm.junit.TeaVMTest;
 @TeaVMTest
 public class ArrayListTest {
     @Test
+    public void copyConstructorPreservesNullsAndOwnsStorage() {
+        ArrayList<Object> source = new ArrayList<>(32);
+        source.add("first");
+        source.add(null);
+        ArrayList<Object> copy = new ArrayList<>(source);
+        assertArrayEquals(new Object[] { "first", null }, copy.toArray());
+        source.set(0, "source");
+        copy.set(1, 42);
+        copy.add("added");
+        assertArrayEquals(new Object[] { "source", null }, source.toArray());
+        assertArrayEquals(new Object[] { "first", 42, "added" }, copy.toArray());
+    }
+
+    @Test
+    public void copyConstructorHonorsSubclassCollectionView() {
+        ArrayList<String> source = new ArrayList<String>() {
+            @Override
+            public Object[] toArray() {
+                return new Object[] { "iterated" };
+            }
+
+            @Override
+            public Iterator<String> iterator() {
+                return Arrays.asList("iterated").iterator();
+            }
+        };
+        source.add("stored");
+        assertEquals("iterated", new ArrayList<>(source).get(0));
+    }
+
+    @Test
+    public void emptyCopyAndCloneOwnTheirStorage() {
+        ArrayList<String> source = new ArrayList<>(32);
+        ArrayList<String> copy = new ArrayList<>(source);
+        ArrayList<?> clone = (ArrayList<?>) source.clone();
+        source.add("source");
+        copy.add("copy");
+        assertTrue(clone.isEmpty());
+        assertEquals("source", source.get(0));
+        assertEquals("copy", copy.get(0));
+    }
+
+    @Test
     public void toArrayCopiesLogicalElements() {
         ArrayList<String> list = new ArrayList<>(32);
         list.add("first");
