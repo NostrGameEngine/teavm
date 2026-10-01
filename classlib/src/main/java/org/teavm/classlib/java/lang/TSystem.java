@@ -95,8 +95,8 @@ public final class TSystem extends TObject {
         if (src == null || dest == null) {
             throw new TNullPointerException("Either src or dest is null");
         }
-        if (srcPos < 0 || destPos < 0 || length < 0 || srcPos + length > TArray.getLength(src)
-                || destPos + length > TArray.getLength(dest)) {
+        if (srcPos < 0 || destPos < 0 || length < 0 || srcPos > TArray.getLength(src) - length
+                || destPos > TArray.getLength(dest) - length) {
             throw new TIndexOutOfBoundsException();
         }
         if (src != dest) {
@@ -107,18 +107,22 @@ public final class TSystem extends TObject {
             }
             if (srcType != targetType) {
                 if (!srcType.isPrimitive() && !targetType.isPrimitive()) {
+                    if (targetType.isAssignableFrom(srcType)) {
+                        doArrayCopy(src, srcPos, dest, destPos, length);
+                        return;
+                    }
                     Object[] srcArray = (Object[]) (Object) src;
                     int pos = srcPos;
                     for (int i = 0; i < length; ++i) {
                         Object elem = srcArray[pos++];
-                        if (!targetType.isInstance(elem)) {
+                        if (elem != null && !targetType.isInstance(elem)) {
                             doArrayCopy(src, srcPos, dest, destPos, i);
                             throw new TArrayStoreException();
                         }
                     }
                     doArrayCopy(src, srcPos, dest, destPos, length);
                     return;
-                } else if (!srcType.isPrimitive() || !targetType.isPrimitive()) {
+                } else {
                     throw new TArrayStoreException();
                 }
             }
@@ -127,8 +131,8 @@ public final class TSystem extends TObject {
     }
 
     static void fastArraycopy(Object src, int srcPos, Object dest, int destPos, int length) {
-        if (srcPos < 0 || destPos < 0 || length < 0 || srcPos + length > fastArrayLength(src)
-                || destPos + length > fastArrayLength(dest)) {
+        if (srcPos < 0 || destPos < 0 || length < 0 || srcPos > fastArrayLength(src) - length
+                || destPos > fastArrayLength(dest) - length) {
             throw new TIndexOutOfBoundsException();
         }
         doArrayCopy(src, srcPos, dest, destPos, length);

@@ -33,6 +33,47 @@ import org.teavm.junit.TeaVMTest;
 @TeaVMTest
 @EachTestCompiledSeparately
 public class SystemTest {
+    private Object[] covariantDestination;
+
+    @Test
+    public void checksRuntimeComponentTypeForCovariantParameter() {
+        Object[] source = { "first", 42, "last" };
+        covariantDestination = new String[] { "old0", "old1", "old2" };
+        try {
+            copyReferences(source, covariantDestination);
+            fail("Expected ArrayStoreException");
+        } catch (ArrayStoreException e) {
+            assertArrayEquals(new String[] { "first", "old1", "old2" }, covariantDestination);
+        }
+    }
+
+    private static void copyReferences(Object[] source, Object[] destination) {
+        System.arraycopy(source, 0, destination, 0, source.length);
+    }
+
+    @Test
+    public void copiesNullsIntoNarrowerReferenceArray() {
+        Object[] source = { null, "value", null };
+        String[] destination = { "old", "old", "old" };
+        System.arraycopy(source, 0, destination, 0, source.length);
+        assertArrayEquals(new String[] { null, "value", null }, destination);
+    }
+
+    @Test(expected = ArrayStoreException.class)
+    public void rejectsDifferentPrimitiveArrayTypes() {
+        System.arraycopy(new int[] { 1 }, 0, new float[1], 0, 1);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void rejectsOverflowingCopyRange() {
+        System.arraycopy(new int[1], Integer.MAX_VALUE, new int[1], 0, 1);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void rejectsOverflowingDestinationRange() {
+        System.arraycopy(new int[1], 0, new int[1], Integer.MAX_VALUE, 1);
+    }
+
     @Test
     public void copiesArray() {
         Object a = new Object();
