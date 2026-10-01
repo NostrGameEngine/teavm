@@ -229,13 +229,15 @@ public final class RenderingUtil {
     }
 
     public static void appendLongConstant(SourceWriter writer, long value) {
-        if (value == 0) {
-            writer.appendFunction("Long_ZERO");
-        } else if ((int) value == value) {
-            writer.appendFunction("Long_fromInt").append("(").append(String.valueOf(value)).append(")");
-        } else {
-            writer.appendFunction("Long_create").append("(" + (value & 0xFFFFFFFFL)
-                    + ", " + (value >>> 32) + ")");
+        // The JavaScript long runtime already requires BigInt. A literal avoids
+        // converting and combining the same two 32-bit words on every use.
+        if (value < 0) {
+            writer.append("(");
         }
+        writer.append(Long.toString(value)).append("n");
+        if (value < 0) {
+            writer.append(")");
+        }
+
     }
 }

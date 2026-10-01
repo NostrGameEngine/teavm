@@ -24,6 +24,24 @@ import org.teavm.junit.TeaVMTest;
 
 @TeaVMTest
 public class LongTest {
+    private static volatile long constantInput;
+
+    @Test
+    public void exactConstantsBeyondDoublePrecision() {
+        long[] values = { 0, 1, -1, 9007199254740993L, -9007199254740993L,
+                Long.MAX_VALUE, Long.MIN_VALUE, 0x6D3A91C54E27B8F0L, 0x19C7E42AB508D36FL };
+        for (long value : values) {
+            constantInput = value;
+            assertEquals(Long.parseLong(Long.toString(value)), constantInput);
+        }
+        constantInput = 0x6D3A91C54E27B8F0L;
+        assertTrue(constantInput == 0x6D3A91C54E27B8F0L);
+        assertTrue(constantInput != 0x19C7E42AB508D36FL);
+        constantInput = Long.MIN_VALUE;
+        assertEquals(Long.MIN_VALUE, constantInput / 1L);
+        assertEquals(Long.MAX_VALUE, ~constantInput);
+    }
+
     @Test
     public void parsesLongInSubstring() {
         assertEquals(0, Long.parseLong("[0]", 1, 2, 10));
