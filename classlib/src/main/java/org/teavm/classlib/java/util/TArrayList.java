@@ -15,6 +15,7 @@
  */
 package org.teavm.classlib.java.util;
 
+import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -47,6 +48,28 @@ public class TArrayList<E> extends TAbstractList<E> implements TCloneable, TSeri
             array[i] = iter.next();
         }
         size = array.length;
+    }
+
+    @Override
+    public Object[] toArray() {
+        Object[] copy = new Object[size];
+        System.arraycopy(array, 0, copy, 0, size);
+        return copy;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> T[] toArray(T[] target) {
+        Objects.requireNonNull(target);
+        T[] copy = target;
+        if (target.length < size) {
+            copy = (T[]) Array.newInstance(target.getClass().getComponentType(), size);
+        }
+        System.arraycopy(array, 0, copy, 0, size);
+        if (copy.length > size) {
+            copy[size] = null;
+        }
+        return copy;
     }
 
     public void trimToSize() {

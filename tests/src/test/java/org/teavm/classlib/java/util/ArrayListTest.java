@@ -15,9 +15,11 @@
  */
 package org.teavm.classlib.java.util;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -36,6 +38,59 @@ import org.teavm.junit.TeaVMTest;
 
 @TeaVMTest
 public class ArrayListTest {
+    @Test
+    public void toArrayCopiesLogicalElements() {
+        ArrayList<String> list = new ArrayList<>(32);
+        list.add("first");
+        list.add(null);
+        Object[] copy = list.toArray();
+        assertEquals(Object[].class, copy.getClass());
+        assertArrayEquals(new Object[] { "first", null }, copy);
+        copy[0] = "copy";
+        assertEquals("first", list.get(0));
+        list.set(0, "list");
+        assertEquals("copy", copy[0]);
+    }
+
+    @Test
+    public void toArrayPreservesUnusedTail() {
+        ArrayList<String> list = new ArrayList<>(Arrays.asList("first", "second"));
+        String[] target = { "old", "old", "terminate", "retain" };
+        assertSame(target, list.toArray(target));
+        assertArrayEquals(new String[] { "first", "second", null, "retain" }, target);
+        list.clear();
+        target[1] = "retain";
+        assertSame(target, list.toArray(target));
+        assertArrayEquals(new String[] { null, "retain", null, "retain" }, target);
+    }
+
+    @Test
+    public void toArrayAllocatesRequestedComponentType() {
+        ArrayList<String> list = new ArrayList<>(Arrays.asList("first", null));
+        String[] target = new String[0];
+        String[] copy = list.toArray(target);
+        assertNotSame(target, copy);
+        assertEquals(String[].class, copy.getClass());
+        assertArrayEquals(new String[] { "first", null }, copy);
+    }
+
+    @Test
+    public void toArrayChecksStoresBeforeOverwritingLaterElements() {
+        ArrayList<Object> list = new ArrayList<>(Arrays.asList("first", 42, "last"));
+        String[] target = { "old0", "old1", "old2" };
+        try {
+            list.toArray(target);
+            fail("Expected ArrayStoreException");
+        } catch (ArrayStoreException e) {
+            assertArrayEquals(new String[] { "first", "old1", "old2" }, target);
+        }
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void toArrayRejectsNullTarget() {
+        new ArrayList<String>().toArray((String[]) null);
+    }
+
     @Test
     public void elementsAdded() {
         List<Integer> list = new ArrayList<>();
