@@ -507,6 +507,11 @@ public final class TCollections extends TObject {
 
         @Override
         public TIterator<T> iterator() {
+            // Only the standard ArrayList is known to use AbstractList's iterator.
+            // Subclasses can override iteration and must retain their own behavior.
+            if (list.getClass() == TArrayList.class) {
+                return TAbstractList.iterator((TArrayList<? extends T>) list, false);
+            }
             return unmodifiableIterator(list.iterator());
         }
 

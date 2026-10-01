@@ -189,6 +189,52 @@ public class UnmodifiableViewsTest {
         assertEquals("one", backing.get("a"));
     }
 
+    @Test
+    public void readOnlyIteratorNeverAllowsRemove() {
+        List<String> backing = new ArrayList<>(Arrays.asList("a"));
+        Iterator<String> iterator = Collections.unmodifiableList(backing).iterator();
+        assertUnsupported(iterator::remove);
+        assertEquals("a", iterator.next());
+        assertUnsupported(iterator::remove);
+        assertFalse(iterator.hasNext());
+        assertUnsupported(iterator::remove);
+        assertEquals(Arrays.asList("a"), backing);
+    }
+
+    @Test
+    public void arrayListSubclassKeepsItsCustomIterator() {
+        List<String> backing = new ArrayList<String>() {
+            @Override public Iterator<String> iterator() {
+                return Arrays.asList("custom").iterator();
+            }
+        };
+        backing.add("backing");
+        Iterator<String> iterator = Collections.unmodifiableList(backing).iterator();
+        assertEquals("custom", iterator.next());
+        assertFalse(iterator.hasNext());
+        assertUnsupported(iterator::remove);
+        assertEquals("backing", backing.get(0));
+    }
+
+    @Test
+    public void mutableArrayListIteratorStillRemovesAndKeepsItsCursor() {
+        List<String> backing = new ArrayList<>(Arrays.asList("a", "b", "c"));
+        Iterator<String> iterator = backing.iterator();
+        try {
+            iterator.remove();
+            fail("Removal before next must fail");
+        } catch (IllegalStateException expected) {
+            // Mutable iterators keep the normal removal state machine.
+        }
+        assertEquals("a", iterator.next());
+        iterator.remove();
+        assertEquals("b", iterator.next());
+        iterator.remove();
+        assertEquals("c", iterator.next());
+        assertFalse(iterator.hasNext());
+        assertEquals(Arrays.asList("c"), backing);
+    }
+
     private void assertUnsupported(Runnable action) {
         try {
             action.run();
