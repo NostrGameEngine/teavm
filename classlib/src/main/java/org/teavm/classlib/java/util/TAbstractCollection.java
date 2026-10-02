@@ -16,6 +16,7 @@
 package org.teavm.classlib.java.util;
 
 import java.lang.reflect.Array;
+import org.teavm.classlib.java.lang.TArrayStoreException;
 import org.teavm.classlib.java.lang.TObject;
 import org.teavm.classlib.java.lang.TUnsupportedOperationException;
 
@@ -55,14 +56,18 @@ public abstract class TAbstractCollection<E> extends TObject implements TCollect
         int size = size();
         if (a.length < size) {
             a = (T[]) Array.newInstance(a.getClass().getComponentType(), size);
-        } else {
-            for (int i = size; i < a.length; ++i) {
-                a[i] = null;
-            }
         }
+        Class<?> componentType = a.getClass().getComponentType();
         int i = 0;
         for (TIterator<E> iter = iterator(); iter.hasNext();) {
-            a[i++] = (T) iter.next();
+            E value = iter.next();
+            if (value != null && !componentType.isInstance(value)) {
+                throw new TArrayStoreException();
+            }
+            a[i++] = (T) value;
+        }
+        if (i < a.length) {
+            a[i] = null;
         }
         return a;
     }

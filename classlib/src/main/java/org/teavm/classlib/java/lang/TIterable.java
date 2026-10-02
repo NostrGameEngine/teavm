@@ -17,12 +17,14 @@ package org.teavm.classlib.java.lang;
 
 import java.util.function.Consumer;
 import org.teavm.classlib.java.util.TIterator;
+import org.teavm.classlib.java.util.TObjects;
 import org.teavm.classlib.java.util.TSpliterator;
 
 public interface TIterable<T> {
     TIterator<T> iterator();
 
     default void forEach(Consumer<? super T> action) {
+        TObjects.requireNonNull(action);
         for (TIterator<T> itr = iterator(); itr.hasNext();) {
             action.accept(itr.next());
         }
@@ -33,6 +35,7 @@ public interface TIterable<T> {
         return new TSpliterator<T>() {
             @Override
             public boolean tryAdvance(Consumer<? super T> action) {
+                TObjects.requireNonNull(action);
                 if (iterator.hasNext()) {
                     action.accept(iterator.next());
                     return true;
@@ -43,6 +46,7 @@ public interface TIterable<T> {
 
             @Override
             public void forEachRemaining(Consumer<? super T> action) {
+                TObjects.requireNonNull(action);
                 while (iterator.hasNext()) {
                     action.accept(iterator.next());
                 }

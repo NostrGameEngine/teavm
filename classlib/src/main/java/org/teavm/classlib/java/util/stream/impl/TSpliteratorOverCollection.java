@@ -18,6 +18,7 @@ package org.teavm.classlib.java.util.stream.impl;
 import java.util.function.Consumer;
 import org.teavm.classlib.java.util.TCollection;
 import org.teavm.classlib.java.util.TIterator;
+import org.teavm.classlib.java.util.TObjects;
 import org.teavm.classlib.java.util.TSpliterator;
 
 public class TSpliteratorOverCollection<T> implements TSpliterator<T> {
@@ -30,6 +31,7 @@ public class TSpliteratorOverCollection<T> implements TSpliterator<T> {
 
     @Override
     public boolean tryAdvance(Consumer<? super T> action) {
+        TObjects.requireNonNull(action);
         ensureIterator();
         if (iterator.hasNext()) {
             action.accept(iterator.next());
@@ -41,6 +43,7 @@ public class TSpliteratorOverCollection<T> implements TSpliterator<T> {
 
     @Override
     public void forEachRemaining(Consumer<? super T> action) {
+        TObjects.requireNonNull(action);
         ensureIterator();
         while (iterator.hasNext()) {
             action.accept(iterator.next());

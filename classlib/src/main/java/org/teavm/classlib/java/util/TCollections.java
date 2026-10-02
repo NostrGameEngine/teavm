@@ -15,10 +15,18 @@
  */
 package org.teavm.classlib.java.util;
 
+import java.lang.reflect.Array;
 import java.util.RandomAccess;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import org.teavm.classlib.java.lang.*;
 import org.teavm.classlib.java.util.TMap.Entry;
+import org.teavm.classlib.java.util.function.TUnaryOperator;
 import org.teavm.classlib.java.util.random.TRandomGenerator;
+import org.teavm.interop.Rename;
 
 public final class TCollections extends TObject {
     @SuppressWarnings("rawtypes")
@@ -555,7 +563,63 @@ public final class TCollections extends TObject {
         }
 
         @Override
-        public boolean remove(Object value) {
+        @Rename("equals")
+        public boolean equals0(TObject other) {
+            return other == this || list.equals(other);
+        }
+
+        @Override public int hashCode() {
+            return list.hashCode();
+        }
+        @Override public String toString() {
+            return list.toString();
+        }
+        @Override public boolean containsAll(TCollection<?> values) {
+            return list.containsAll(values);
+        }
+        @Override public boolean isEmpty() {
+            return list.isEmpty();
+        }
+        @Override public void forEach(Consumer<? super T> action) {
+            list.forEach(action);
+        }
+        @Override public boolean add(T value) {
+            throw new TUnsupportedOperationException();
+        }
+        @Override public boolean addAll(TCollection<? extends T> values) {
+            throw new TUnsupportedOperationException();
+        }
+        @Override public boolean remove(Object value) {
+            throw new TUnsupportedOperationException();
+        }
+        @Override public boolean removeAll(TCollection<?> values) {
+            throw new TUnsupportedOperationException();
+        }
+        @Override public boolean retainAll(TCollection<?> values) {
+            throw new TUnsupportedOperationException();
+        }
+        @Override public boolean removeIf(Predicate<? super T> predicate) {
+            throw new TUnsupportedOperationException();
+        }
+        @Override public void clear() {
+            throw new TUnsupportedOperationException();
+        }
+        @Override public void add(int index, T value) {
+            throw new TUnsupportedOperationException();
+        }
+        @Override public boolean addAll(int index, TCollection<? extends T> values) {
+            throw new TUnsupportedOperationException();
+        }
+        @Override public T set(int index, T value) {
+            throw new TUnsupportedOperationException();
+        }
+        @Override public T remove(int index) {
+            throw new TUnsupportedOperationException();
+        }
+        @Override public void replaceAll(TUnaryOperator<T> operator) {
+            throw new TUnsupportedOperationException();
+        }
+        @Override public void sort(TComparator<? super T> comparator) {
             throw new TUnsupportedOperationException();
         }
     }
@@ -567,18 +631,64 @@ public final class TCollections extends TObject {
     }
 
     public static <T> TCollection<T> unmodifiableCollection(final TCollection<? extends T> c) {
-        TObjects.requireNonNull(c);
-        return new TAbstractCollection<>() {
-            @Override public TIterator<T> iterator() {
-                return unmodifiableIterator(c.iterator());
-            }
-            @Override public int size() {
-                return c.size();
-            }
-            @Override public boolean remove(Object o) {
-                throw new UnsupportedOperationException();
-            }
-        };
+        return new UnmodifiableCollection<>(TObjects.requireNonNull(c));
+    }
+
+    private static class UnmodifiableCollection<T> extends TAbstractCollection<T> {
+        final TCollection<? extends T> collection;
+
+        UnmodifiableCollection(TCollection<? extends T> collection) {
+            this.collection = collection;
+        }
+
+        @Override public TIterator<T> iterator() {
+            return unmodifiableIterator(collection.iterator());
+        }
+        @Override public int size() {
+            return collection.size();
+        }
+        @Override public boolean isEmpty() {
+            return collection.isEmpty();
+        }
+        @Override public boolean contains(Object value) {
+            return collection.contains(value);
+        }
+        @Override public boolean containsAll(TCollection<?> values) {
+            return collection.containsAll(values);
+        }
+        @Override public Object[] toArray() {
+            return collection.toArray();
+        }
+        @Override public <S> S[] toArray(S[] array) {
+            return collection.toArray(array);
+        }
+        @Override public String toString() {
+            return collection.toString();
+        }
+        @Override public void forEach(Consumer<? super T> action) {
+            collection.forEach(action);
+        }
+        @Override public boolean add(T value) {
+            throw new TUnsupportedOperationException();
+        }
+        @Override public boolean addAll(TCollection<? extends T> values) {
+            throw new TUnsupportedOperationException();
+        }
+        @Override public boolean remove(Object value) {
+            throw new TUnsupportedOperationException();
+        }
+        @Override public boolean removeAll(TCollection<?> values) {
+            throw new TUnsupportedOperationException();
+        }
+        @Override public boolean retainAll(TCollection<?> values) {
+            throw new TUnsupportedOperationException();
+        }
+        @Override public boolean removeIf(Predicate<? super T> predicate) {
+            throw new TUnsupportedOperationException();
+        }
+        @Override public void clear() {
+            throw new TUnsupportedOperationException();
+        }
     }
 
     private static <T> TIterator<T> unmodifiableIterator(final TIterator<? extends T> c) {
@@ -592,31 +702,27 @@ public final class TCollections extends TObject {
             @Override public void remove() {
                 throw new TUnsupportedOperationException();
             }
+            @Override public void forEachRemaining(Consumer<? super T> action) {
+                c.forEachRemaining(action);
+            }
         };
     }
 
     public static <T> TSet<T> unmodifiableSet(final TSet<? extends T> s) {
-        TObjects.requireNonNull(s);
-        return new TAbstractSet<>() {
-            @Override public TIterator<T> iterator() {
-                return unmodifiableIterator(s.iterator());
-            }
-            @Override public int size() {
-                return s.size();
-            }
-            @Override public boolean remove(Object o) {
-                throw new UnsupportedOperationException();
-            }
-            @Override public boolean contains(Object o) {
-                return s.contains(o);
-            }
-            @Override public boolean containsAll(TCollection<?> c) {
-                return s.containsAll(c);
-            }
-            @Override public boolean isEmpty() {
-                return s.isEmpty();
-            }
-        };
+        return new UnmodifiableSet<>(TObjects.requireNonNull(s));
+    }
+
+    private static class UnmodifiableSet<T> extends UnmodifiableCollection<T> implements TSet<T> {
+        UnmodifiableSet(TSet<? extends T> set) {
+            super(set);
+        }
+
+        @Override public boolean equals(Object other) {
+            return other == this || collection.equals(other);
+        }
+        @Override public int hashCode() {
+            return collection.hashCode();
+        }
     }
 
     public static <K, V> TMap<K, V> unmodifiableMap(final TMap<? extends K, ? extends V> m) {
@@ -657,40 +763,178 @@ public final class TCollections extends TObject {
                 }
                 return cachedValues;
             }
-            @Override public V remove(Object o) {
+            @Override
+            @SuppressWarnings("unchecked")
+            public V getOrDefault(Object key, V defaultValue) {
+                return ((TMap<K, V>) m).getOrDefault(key, defaultValue);
+            }
+            @Override public void forEach(BiConsumer<? super K, ? super V> action) {
+                m.forEach(action);
+            }
+            @Override public boolean equals(Object other) {
+                return other == this || m.equals(other);
+            }
+            @Override public int hashCode() {
+                return m.hashCode();
+            }
+            @Override public String toString() {
+                return m.toString();
+            }
+            @Override public V put(K key, V value) {
+                throw new TUnsupportedOperationException();
+            }
+            @Override public void putAll(TMap<? extends K, ? extends V> values) {
+                throw new TUnsupportedOperationException();
+            }
+            @Override public V remove(Object key) {
+                throw new TUnsupportedOperationException();
+            }
+            @Override public void clear() {
+                throw new TUnsupportedOperationException();
+            }
+            @Override public V putIfAbsent(K key, V value) {
+                throw new TUnsupportedOperationException();
+            }
+            @Override public boolean remove(Object key, Object value) {
+                throw new TUnsupportedOperationException();
+            }
+            @Override public boolean replace(K key, V oldValue, V newValue) {
+                throw new TUnsupportedOperationException();
+            }
+            @Override public V replace(K key, V value) {
+                throw new TUnsupportedOperationException();
+            }
+            @Override public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {
+                throw new TUnsupportedOperationException();
+            }
+            @Override public V computeIfAbsent(K key, Function<? super K, ? extends V> function) {
+                throw new TUnsupportedOperationException();
+            }
+            @Override public V computeIfPresent(K key, BiFunction<? super K, ? super V, ? extends V> function) {
+                throw new TUnsupportedOperationException();
+            }
+            @Override public V compute(K key, BiFunction<? super K, ? super V, ? extends V> function) {
+                throw new TUnsupportedOperationException();
+            }
+            @Override public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> function) {
                 throw new TUnsupportedOperationException();
             }
         };
     }
 
     private static <K, V> TSet<Entry<K, V>> unmodifiableMapEntrySet(
-            final TSet<? extends Entry<? extends K, ? extends V>> c) {
-        return new TAbstractSet<>() {
-            @Override public int size() {
-                return c.size();
-            }
-            @Override public TIterator<Entry<K, V>> iterator() {
-                return unmodifiableMapEntryIterator(c.iterator());
-            }
-            @Override public boolean remove(Object o) {
-                throw new UnsupportedOperationException();
-            }
-        };
+            TSet<? extends Entry<? extends K, ? extends V>> entries) {
+        return new UnmodifiableEntrySet<>(entries);
     }
 
-    private static <K, V> TIterator<Entry<K, V>> unmodifiableMapEntryIterator(
-            final TIterator<? extends Entry<? extends K, ? extends V>> c) {
-        return new TIterator<>() {
-            @Override public boolean hasNext() {
-                return c.hasNext();
+    private static class UnmodifiableEntrySet<K, V> extends UnmodifiableCollection<Entry<K, V>>
+            implements TSet<Entry<K, V>> {
+        private final TSet<? extends Entry<? extends K, ? extends V>> entries;
+
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        UnmodifiableEntrySet(TSet<? extends Entry<? extends K, ? extends V>> entries) {
+            super((TCollection) entries);
+            this.entries = entries;
+        }
+
+        @Override public TIterator<Entry<K, V>> iterator() {
+            TIterator<? extends Entry<? extends K, ? extends V>> iterator = entries.iterator();
+            return new TIterator<>() {
+                @Override public boolean hasNext() {
+                    return iterator.hasNext();
+                }
+                @Override public Entry<K, V> next() {
+                    return new UnmodifiableEntry<>(iterator.next());
+                }
+                @Override public void remove() {
+                    throw new TUnsupportedOperationException();
+                }
+            };
+        }
+        @Override public void forEach(Consumer<? super Entry<K, V>> action) {
+            TObjects.requireNonNull(action);
+            entries.forEach(entry -> action.accept(new UnmodifiableEntry<>(entry)));
+        }
+        @Override public Object[] toArray() {
+            Object[] array = entries.toArray();
+            for (int i = 0; i < array.length; ++i) {
+                @SuppressWarnings("unchecked")
+                Entry<? extends K, ? extends V> entry = (Entry<? extends K, ? extends V>) array[i];
+                array[i] = new UnmodifiableEntry<>(entry);
             }
-            @Override public Entry<K, V> next() {
-                return new TAbstractMap.SimpleImmutableEntry<>(c.next());
+            return array;
+        }
+        @Override
+        @SuppressWarnings("unchecked")
+        public <S> S[] toArray(S[] array) {
+            // Never place mutable backing entries in the caller's array, even temporarily.
+            Object[] entries = toArray();
+            if (array.length < entries.length) {
+                array = (S[]) Array.newInstance(array.getClass().getComponentType(), entries.length);
             }
-            @Override public void remove() {
-                throw new TUnsupportedOperationException();
+            System.arraycopy(entries, 0, array, 0, entries.length);
+            if (array.length > entries.length) {
+                array[entries.length] = null;
             }
-        };
+            return array;
+        }
+        @Override public boolean contains(Object value) {
+            // A caller's Entry.equals must never receive a mutable backing entry.
+            return value instanceof Entry && entries.contains(new UnmodifiableEntry<>((Entry<?, ?>) value));
+        }
+        @Override public boolean containsAll(TCollection<?> values) {
+            for (TIterator<?> iterator = values.iterator(); iterator.hasNext();) {
+                if (!contains(iterator.next())) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        @Override public boolean equals(Object other) {
+            if (other == this) {
+                return true;
+            }
+            if (!(other instanceof TSet)) {
+                return false;
+            }
+            TSet<?> set = (TSet<?>) other;
+            return set.size() == size() && containsAll(set);
+        }
+        @Override public int hashCode() {
+            return entries.hashCode();
+        }
+    }
+
+    private static class UnmodifiableEntry<K, V> implements Entry<K, V> {
+        private final Entry<? extends K, ? extends V> entry;
+
+        UnmodifiableEntry(Entry<? extends K, ? extends V> entry) {
+            this.entry = entry;
+        }
+
+        @Override public K getKey() {
+            return entry.getKey();
+        }
+        @Override public V getValue() {
+            return entry.getValue();
+        }
+        @Override public V setValue(V value) {
+            throw new TUnsupportedOperationException();
+        }
+        @Override public boolean equals(Object other) {
+            if (!(other instanceof Entry)) {
+                return false;
+            }
+            Entry<?, ?> otherEntry = (Entry<?, ?>) other;
+            return TObjects.equals(getKey(), otherEntry.getKey())
+                    && TObjects.equals(getValue(), otherEntry.getValue());
+        }
+        @Override public int hashCode() {
+            return entry.hashCode();
+        }
+        @Override public String toString() {
+            return entry.toString();
+        }
     }
 
     public static <T> TCollection<T> synchronizedCollection(TCollection<T> c) {

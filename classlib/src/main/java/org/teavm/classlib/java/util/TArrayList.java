@@ -265,6 +265,7 @@ public class TArrayList<E> extends TAbstractList<E> implements TCloneable, TSeri
 
     @Override
     public void forEach(Consumer<? super E> action) {
+        Objects.requireNonNull(action);
         for (int i = 0; i < size; i++) {
             action.accept(array[i]);
         }

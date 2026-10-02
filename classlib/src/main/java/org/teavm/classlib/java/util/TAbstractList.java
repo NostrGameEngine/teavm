@@ -140,6 +140,9 @@ public abstract class TAbstractList<E> extends TAbstractCollection<E> implements
 
     @Override
     public TListIterator<E> listIterator(int index) {
+        if (index < 0 || index > size()) {
+            throw new TIndexOutOfBoundsException();
+        }
         return new TListIteratorImpl(index, modCount, size());
     }
 
@@ -263,7 +266,10 @@ public abstract class TAbstractList<E> extends TAbstractCollection<E> implements
             TAbstractList.this.set(j, e);
         }
         @Override public void add(E e) {
-            TAbstractList.this.add(i++, e);
+            checkConcurrentModification();
+            TAbstractList.this.add(i, e);
+            ++i;
+            ++sz;
             lastModCount = modCount;
             j = -1;
         }

@@ -223,6 +223,7 @@ public class THashMap<K, V> extends TAbstractMap<K, V> implements TCloneable, TS
 
         @Override
         public void forEach(Consumer<? super Entry<K, V>> action) {
+            TObjects.requireNonNull(action);
             if (associatedMap.elementCount > 0) {
                 int prevModCount = associatedMap.modCount;
                 for (int i = 0; i < associatedMap.elementData.length; i++) {
@@ -425,6 +426,7 @@ public class THashMap<K, V> extends TAbstractMap<K, V> implements TCloneable, TS
                     return new KeyIterator<>(THashMap.this);
                 }
                 @Override public void forEach(Consumer<? super K> action) {
+                    TObjects.requireNonNull(action);
                     if (elementCount > 0) {
                         int prevModCount = modCount;
                         for (int i = 0; i < elementData.length; i++) {
@@ -604,6 +606,7 @@ public class THashMap<K, V> extends TAbstractMap<K, V> implements TCloneable, TS
                     return new ValueIterator<>(THashMap.this);
                 }
                 @Override public void forEach(Consumer<? super V> action) {
+                    TObjects.requireNonNull(action);
                     if (elementCount > 0) {
                         int prevModCount = modCount;
                         for (int i = 0; i < elementData.length; i++) {
@@ -625,6 +628,7 @@ public class THashMap<K, V> extends TAbstractMap<K, V> implements TCloneable, TS
 
     @Override
     public void forEach(BiConsumer<? super K, ? super V> action) {
+        TObjects.requireNonNull(action);
         if (elementCount > 0) {
             int prevModCount = modCount;
             for (int i = 0; i < elementData.length; i++) {
