@@ -70,20 +70,26 @@ let $rt_metadata = data => {
 
         // Supertypes are emitted before their subtypes, including across metadata portions.
         // Build the exact interface closure once per class, not once per checked object.
-        let mask = new teavm_globals.Uint32Array(($rt_interfaceCount + 31) >>> 5);
-        if (m.parent !== null) {
-            mask.set(m.parent[$rt_meta].interfaceMask);
-        }
-        if (m.interfaceId >= 0) {
-            mask[m.interfaceId >>> 5] |= 1 << (m.interfaceId & 31);
-        }
-        for (let ifaceIndex = 0; ifaceIndex < m.superinterfaces.length; ++ifaceIndex) {
-            let inherited = m.superinterfaces[ifaceIndex][$rt_meta].interfaceMask;
-            for (let j = 0; j < inherited.length; ++j) {
-                mask[j] |= inherited[j];
+        if (m.parent !== null && m.interfaceId < 0 && m.superinterfaces.length === 0) {
+            // The closure is immutable after metadata initialization. A subclass
+            // with no new interfaces can share it, even if later interfaces use more words.
+            m.interfaceMask = m.parent[$rt_meta].interfaceMask;
+        } else {
+            let mask = new teavm_globals.Uint32Array(($rt_interfaceCount + 31) >>> 5);
+            if (m.parent !== null) {
+                mask.set(m.parent[$rt_meta].interfaceMask);
             }
+            if (m.interfaceId >= 0) {
+                mask[m.interfaceId >>> 5] |= 1 << (m.interfaceId & 31);
+            }
+            for (let ifaceIndex = 0; ifaceIndex < m.superinterfaces.length; ++ifaceIndex) {
+                let inherited = m.superinterfaces[ifaceIndex][$rt_meta].interfaceMask;
+                for (let j = 0; j < inherited.length; ++j) {
+                    mask[j] |= inherited[j];
+                }
+            }
+            m.interfaceMask = mask;
         }
-        m.interfaceMask = mask;
 
         let innerClassInfo = data[i++];
         if (innerClassInfo !== 0) {

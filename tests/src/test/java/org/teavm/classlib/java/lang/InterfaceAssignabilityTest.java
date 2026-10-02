@@ -95,6 +95,37 @@ public class InterfaceAssignabilityTest {
         assertFalse(Root.class.isInstance(list));
     }
 
+    @Test
+    public void inheritedClosuresDoNotChangeWhenChildrenAddInterfaces() {
+        Object base = new Base();
+        Object child = new PlainChild();
+        Object extended = new ExtendedChild();
+        assertTrue(Left.class.isInstance(child));
+        assertTrue(Root.class.isAssignableFrom(PlainGrandchild.class));
+        assertFalse(Right.class.isInstance(base));
+        assertFalse(Right.class.isInstance(child));
+        assertTrue(Right.class.isInstance(extended));
+        assertFalse(Diamond.class.isInstance(extended));
+        assertTrue(I39.class.isAssignableFrom(ManyInterfacesChild.class));
+        assertFalse(Right.class.isAssignableFrom(ManyInterfacesChild.class));
+        assertFalse(I39.class.isAssignableFrom(PlainGrandchild.class));
+        // Recheck ancestors after querying the extended descendant.
+        assertFalse(Right.class.isAssignableFrom(Base.class));
+        assertFalse(Right.class.isAssignableFrom(PlainChild.class));
+    }
+
+    private static class PlainChild extends Base {
+    }
+
+    private static class PlainGrandchild extends PlainChild {
+    }
+
+    private static class ExtendedChild extends PlainChild implements Right {
+    }
+
+    private static class ManyInterfacesChild extends ManyInterfaces {
+    }
+
     private interface Root {
     }
 
