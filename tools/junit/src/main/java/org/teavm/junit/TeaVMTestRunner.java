@@ -176,10 +176,10 @@ public class TeaVMTestRunner extends Runner implements Filterable {
     private List<Method> getChildren() {
         List<Method> children = new ArrayList<>();
         Class<?> cls = testClass;
-        Set<String> foundMethods = new HashSet<>();
+        Set<MethodDescriptor> foundMethods = new HashSet<>();
         while (cls != Object.class && !cls.getName().equals(JUNIT3_BASE_CLASS)) {
             for (Method method : cls.getDeclaredMethods()) {
-                if (foundMethods.add(method.getName()) && isTestMethod(method)) {
+                if (foundMethods.add(getDescriptor(method)) && isTestMethod(method)) {
                     children.add(method);
                 }
             }
