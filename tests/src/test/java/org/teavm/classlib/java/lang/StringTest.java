@@ -33,6 +33,57 @@ import org.teavm.junit.TestPlatform;
 @EachTestCompiledSeparately
 public class StringTest {
     @Test
+    public void equalityHandlesEmptyNullAndOtherTypes() {
+        String empty = new String(new char[0]);
+        assertTrue(empty.equals(""));
+        assertTrue(empty.equals(empty));
+        assertFalse(empty.equals(null));
+        assertFalse(empty.equals(new StringBuilder()));
+        assertFalse(empty.equals("a"));
+        assertFalse("a".equals(empty));
+        assertFalse("a".equals("ab"));
+        assertFalse("ab".equals("a"));
+    }
+
+    @Test
+    public void equalityComparesAllUtf16CodeUnits() {
+        int[] lengths = { 1, 2, 15, 16, 63, 64, 65, 1024 };
+        for (int length : lengths) {
+            char[] characters = new char[length];
+            for (int i = 0; i < length; i++) {
+                characters[i] = (char) (i * 8191);
+            }
+            String left = new String(characters);
+            String right = new String(characters);
+            assertTrue(left.equals(right));
+            for (int i = 0; i < length; i++) {
+                characters[i] ^= 1;
+                String different = new String(characters);
+                assertFalse(left.equals(different));
+                assertFalse(different.equals(right));
+                characters[i] ^= 1;
+            }
+            assertTrue(left.equals(right));
+        }
+        String surrogate = new String(new char[] { 0, 0xd800, 0xdc00, 0xdfff, 0xffff });
+        assertTrue(surrogate.equals(new String(surrogate.toCharArray())));
+        assertFalse(surrogate.equals(new String(new char[] { 0, 0xd800, 0xdc00, 0xdffe, 0xffff })));
+    }
+
+    @Test
+    public void equalityRespectsSlicesAndCopiedStorage() {
+        char[] characters = { 'x', 'a', 0xd800, 0, 'b', 'y' };
+        String sliced = new String(characters, 1, 4);
+        String copied = new String(sliced.toCharArray());
+        String substring = new String(characters).substring(1, 5);
+        assertTrue(sliced.equals(copied));
+        assertTrue(sliced.equals(substring));
+        characters[1] = 'z';
+        assertTrue(sliced.equals(copied));
+        assertFalse(sliced.equals(new String(characters, 1, 4)));
+    }
+
+    @Test
     public void charsExtracted() {
         String str = "123";
         assertEquals('1', str.charAt(0));

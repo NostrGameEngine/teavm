@@ -744,10 +744,11 @@ public final class TString extends TObject implements TSerializable, TComparable
         if (PlatformDetector.isJavaScript()) {
             return nativeString() == str.nativeString();
         } else {
-            if (str.length() != length()) {
+            int length = charactersLength();
+            if (str.charactersLength() != length) {
                 return false;
             }
-            for (int i = 0; i < str.length(); ++i) {
+            for (int i = 0; i < length; ++i) {
                 if (charactersGet(i) != str.charactersGet(i)) {
                     return false;
                 }
