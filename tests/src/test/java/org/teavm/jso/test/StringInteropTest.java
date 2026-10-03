@@ -123,6 +123,22 @@ public class StringInteropTest {
         assertEquals(owned, roundTrip(copy));
     }
 
+    @Test
+    public void shortTransfersPreserveOwnershipAndEviction() {
+        String[] values = new String[40];
+        for (int i = 0; i < values.length; ++i) {
+            char[] source = ("key-" + i + "\u0000\ud800\udfff").toCharArray();
+            values[i] = new String(source);
+            assertEquals(values[i], roundTrip(values[i]));
+            java.util.Arrays.fill(source, 'x');
+        }
+        for (int i = values.length - 1; i >= 0; --i) {
+            String expected = "key-" + i + "\u0000\ud800\udfff";
+            assertEquals(expected, roundTrip(values[i]));
+            assertEquals(expected, roundTrip(new String(values[i])));
+        }
+    }
+
     @JSBody(params = "value", script = "return value;")
     private static native String roundTrip(String value);
 

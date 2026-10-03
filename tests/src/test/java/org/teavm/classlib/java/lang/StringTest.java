@@ -32,6 +32,40 @@ import org.teavm.junit.TestPlatform;
 @TeaVMTest
 @EachTestCompiledSeparately
 public class StringTest {
+    @Test(expected = NullPointerException.class)
+    public void nullStringCopyThrowsJavaException() {
+        new String((String) null);
+    }
+
+    @Test
+    public void hashCodeMatchesHotSpotUtf16Fixtures() {
+        char[] characters = new char[65536];
+        for (int i = 0; i < characters.length; ++i) {
+            characters[i] = (char) i;
+        }
+        String[] values = { "abc", "Aa", "BB", "polygenelubricants", "\ud800", "\ud800\udfff",
+                new String(characters), "nostr4j\u0000\ud800\udfff".repeat(1024) };
+        int[] hashes = { 96354, 2112, 2112, -2147483648, 55296, 1771519, 2130739200, -1338940416 };
+        for (int i = 0; i < values.length; ++i) {
+            assertEquals(hashes[i], values[i].hashCode());
+            assertEquals(hashes[i], new String(values[i]).hashCode());
+            assertEquals(hashes[i], values[i].hashCode());
+        }
+    }
+
+    @Test
+    public void zeroHashesAndIndependentCopiesRemainCorrect() {
+        String value = "\u0000".repeat(8192);
+        assertEquals(0, value.hashCode());
+        assertEquals(0, value.hashCode());
+        assertEquals(0, new String(value).hashCode());
+        String original = "polygenelubricants";
+        original.hashCode();
+        String copy = new String(original);
+        org.junit.Assert.assertNotSame(original, copy);
+        assertEquals(-2147483648, copy.hashCode());
+    }
+
     @Test
     public void substringSearchPreservesBoundsAndUtf16() {
         String value = "a\u0000\ud800b\ud83d\ude00a\u0000\ud800b";

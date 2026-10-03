@@ -52,6 +52,7 @@ public final class TString extends TObject implements TSerializable, TComparable
     private native void initWithEmptyChars();
 
     public TString(TString other) {
+        hashCode = other.hashCode;
         borrowChars(other);
     }
 
@@ -827,12 +828,15 @@ public final class TString extends TObject implements TSerializable, TComparable
 
     @Override
     public int hashCode() {
-        if (hashCode == 0) {
-            for (var i = 0; i < charactersLength(); ++i) {
-                hashCode = 31 * hashCode + charactersGet(i);
+        var hash = hashCode;
+        if (hash == 0) {
+            var length = charactersLength();
+            for (var i = 0; i < length; ++i) {
+                hash = 31 * hash + charactersGet(i);
             }
+            hashCode = hash;
         }
-        return hashCode;
+        return hash;
     }
 
     public TString toLowerCase() {
