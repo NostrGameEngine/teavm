@@ -89,6 +89,40 @@ public class StringInteropTest {
         assertEquals("irst\u0000", roundTrip(slice));
     }
 
+    @Test
+    public void largeImportedSnapshotsRemainIndependentAfterEviction() {
+        String expected = "first\u0000\ud800".repeat(8192);
+        JSObject container = holder(expected);
+        String imported = read(container);
+        write(container, "second\udfff".repeat(8192));
+        assertEquals(expected, roundTrip(imported));
+        String[] retained = new String[80];
+        for (int i = 0; i < retained.length; ++i) {
+            retained[i] = roundTrip("value-" + i + "\u0000\ud800" + "x".repeat(65536));
+        }
+        assertEquals(expected, roundTrip(imported));
+        for (int i = 0; i < retained.length; ++i) {
+            assertEquals("value-" + i + "\u0000\ud800" + "x".repeat(65536), roundTrip(retained[i]));
+        }
+    }
+
+    @Test
+    public void largeCachedStringsKeepConstructorAndBuilderOwnership() {
+        char[] source = new char[8192];
+        java.util.Arrays.fill(source, 'a');
+        String owned = new String(source);
+        String imported = roundTrip(owned);
+        java.util.Arrays.fill(source, 'b');
+        assertEquals(owned, roundTrip(imported));
+        StringBuilder builder = new StringBuilder(imported);
+        String snapshot = roundTrip(builder.toString());
+        builder.setCharAt(0, 'c');
+        assertEquals(owned, roundTrip(snapshot));
+        String copy = new String(imported);
+        assertNotSame(imported, copy);
+        assertEquals(owned, roundTrip(copy));
+    }
+
     @JSBody(params = "value", script = "return value;")
     private static native String roundTrip(String value);
 
