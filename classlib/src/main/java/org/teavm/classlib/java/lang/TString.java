@@ -831,7 +831,15 @@ public final class TString extends TObject implements TSerializable, TComparable
         var hash = hashCode;
         if (hash == 0) {
             var length = charactersLength();
-            for (var i = 0; i < length; ++i) {
+            var i = 0;
+            if (PlatformDetector.isWebAssemblyGC()) {
+                // Fold four UTF-16 units with powers of 31; int overflow preserves the Java hash.
+                for (; i <= length - 4; i += 4) {
+                    hash = 923521 * hash + 29791 * charactersGet(i) + 961 * charactersGet(i + 1)
+                            + 31 * charactersGet(i + 2) + charactersGet(i + 3);
+                }
+            }
+            for (; i < length; ++i) {
                 hash = 31 * hash + charactersGet(i);
             }
             hashCode = hash;
