@@ -392,11 +392,19 @@ public final class TString extends TObject implements TSerializable, TComparable
     }
 
     public int indexOf(TString str, int fromIndex) {
+        int length = charactersLength();
+        int otherLength = str.charactersLength();
         fromIndex = Math.max(0, fromIndex);
-        int toIndex = length() - str.length();
+        if (otherLength == 0) {
+            return Math.min(fromIndex, length);
+        }
+        if (PlatformDetector.isJavaScript()) {
+            return indexOfJS(nativeString(), str.nativeString(), fromIndex);
+        }
+        int toIndex = length - otherLength;
         outer:
         for (int i = fromIndex; i <= toIndex; ++i) {
-            for (int j = 0; j < str.length(); ++j) {
+            for (int j = 0; j < otherLength; ++j) {
                 if (charactersGet(i + j) != str.charactersGet(j)) {
                     continue outer;
                 }
@@ -405,16 +413,27 @@ public final class TString extends TObject implements TSerializable, TComparable
         }
         return -1;
     }
+
+    @NoSideEffects
+    private static native int indexOfJS(Object value, Object search, int fromIndex);
 
     public int indexOf(TString str) {
         return indexOf(str, 0);
     }
 
     public int lastIndexOf(TString str, int fromIndex) {
-        fromIndex = Math.min(fromIndex, length() - str.length());
+        int length = charactersLength();
+        int otherLength = str.charactersLength();
+        if (fromIndex < 0) {
+            return -1;
+        }
+        if (PlatformDetector.isJavaScript()) {
+            return lastIndexOfJS(nativeString(), str.nativeString(), fromIndex);
+        }
+        fromIndex = Math.min(fromIndex, length - otherLength);
         outer:
         for (int i = fromIndex; i >= 0; --i) {
-            for (int j = 0; j < str.length(); ++j) {
+            for (int j = 0; j < otherLength; ++j) {
                 if (charactersGet(i + j) != str.charactersGet(j)) {
                     continue outer;
                 }
@@ -423,6 +442,9 @@ public final class TString extends TObject implements TSerializable, TComparable
         }
         return -1;
     }
+
+    @NoSideEffects
+    private static native int lastIndexOfJS(Object value, Object search, int fromIndex);
 
     public int lastIndexOf(TString str) {
         return lastIndexOf(str, length());

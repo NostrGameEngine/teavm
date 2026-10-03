@@ -38,6 +38,8 @@ public class JSStringInjector implements Injector, Function<ProviderContext, Inj
             case "fastCharArray":
             case "nativeString":
             case "substringJS":
+            case "indexOfJS":
+            case "lastIndexOfJS":
             case "toLowerCaseJS":
             case "toUpperCaseJS":
             case "intern":
@@ -81,6 +83,12 @@ public class JSStringInjector implements Injector, Function<ProviderContext, Inj
                 break;
             case "substringJS":
                 substringJS(context);
+                break;
+            case "indexOfJS":
+                searchJS(context, "indexOf");
+                break;
+            case "lastIndexOfJS":
+                searchJS(context, "lastIndexOf");
                 break;
             case "toLowerCaseJS":
                 toLowerCaseJS(context);
@@ -174,6 +182,16 @@ public class JSStringInjector implements Injector, Function<ProviderContext, Inj
         var writer = context.getWriter();
         context.writeExpr(context.getArgument(0));
         writer.append(".substring(");
+        context.writeExpr(context.getArgument(1));
+        writer.append(",").ws();
+        context.writeExpr(context.getArgument(2));
+        writer.append(")");
+    }
+
+    private void searchJS(InjectorContext context, String method) {
+        var writer = context.getWriter();
+        context.writeExpr(context.getArgument(0));
+        writer.append(".").append(method).append("(");
         context.writeExpr(context.getArgument(1));
         writer.append(",").ws();
         context.writeExpr(context.getArgument(2));

@@ -33,6 +33,38 @@ import org.teavm.junit.TestPlatform;
 @EachTestCompiledSeparately
 public class StringTest {
     @Test
+    public void substringSearchPreservesBoundsAndUtf16() {
+        String value = "a\u0000\ud800b\ud83d\ude00a\u0000\ud800b";
+        assertEquals(0, value.indexOf("", -1));
+        assertEquals(value.length(), value.indexOf("", Integer.MAX_VALUE));
+        assertEquals(-1, value.lastIndexOf("", -1));
+        assertEquals(value.length(), value.lastIndexOf("", Integer.MAX_VALUE));
+        assertEquals(1, value.indexOf("\u0000\ud800b", Integer.MIN_VALUE));
+        assertEquals(7, value.indexOf("\u0000\ud800b", 2));
+        assertEquals(-1, value.indexOf("\u0000\ud800b", Integer.MAX_VALUE));
+        assertEquals(7, value.lastIndexOf("\u0000\ud800b", Integer.MAX_VALUE));
+        assertEquals(1, value.lastIndexOf("\u0000\ud800b", 6));
+        assertEquals(4, value.indexOf("\ud83d\ude00"));
+        assertEquals(5, value.lastIndexOf("\ude00", 5));
+        assertEquals(-1, value.indexOf(value + "x"));
+        assertEquals(-1, value.lastIndexOf(value + "x"));
+        assertEquals(0, "".indexOf("", Integer.MAX_VALUE));
+        assertEquals(0, "".lastIndexOf("", Integer.MAX_VALUE));
+        try {
+            value.indexOf(null, -1);
+            throw new AssertionError("Null search succeeded");
+        } catch (NullPointerException expected) {
+            assertEquals(-1, value.indexOf("missing"));
+        }
+        try {
+            value.lastIndexOf(null, -1);
+            throw new AssertionError("Null search succeeded");
+        } catch (NullPointerException expected) {
+            assertEquals(-1, value.lastIndexOf("missing"));
+        }
+    }
+
+    @Test
     public void stringPoolPreservesWtf8BoundariesAndSurrogates() {
         String value = "\0\u007f\u0080\u07ff\u0800\ud800\udc00\udfff\uffff";
         char[] expected = { 0, 0x7f, 0x80, 0x7ff, 0x800, 0xd800, 0xdc00, 0xdfff, 0xffff };
