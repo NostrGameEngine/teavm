@@ -33,6 +33,26 @@ import org.teavm.junit.TestPlatform;
 @EachTestCompiledSeparately
 public class StringTest {
     @Test
+    public void stringPoolPreservesWtf8BoundariesAndSurrogates() {
+        String value = "\0\u007f\u0080\u07ff\u0800\ud800\udc00\udfff\uffff";
+        char[] expected = { 0, 0x7f, 0x80, 0x7ff, 0x800, 0xd800, 0xdc00, 0xdfff, 0xffff };
+        assertArrayEquals(expected, value.toCharArray());
+        assertEquals(new String(expected), value);
+        assertSame(value, new String(expected).intern());
+    }
+
+    @Test
+    public void stringPoolRetainsAdjacentEmptyAndMixedConstants() {
+        String[] values = { "", "ASCII", "\u0800middle\u0080", "\ud83d\ude00", "\ud800x\udfff" };
+        char[][] expected = { {}, { 'A', 'S', 'C', 'I', 'I' },
+                { 0x800, 'm', 'i', 'd', 'd', 'l', 'e', 0x80 }, { 0xd83d, 0xde00 }, { 0xd800, 'x', 0xdfff } };
+        for (int i = 0; i < values.length; i++) {
+            assertArrayEquals(expected[i], values[i].toCharArray());
+            assertSame(values[i], new String(expected[i]).intern());
+        }
+    }
+
+    @Test
     public void equalityHandlesEmptyNullAndOtherTypes() {
         String empty = new String(new char[0]);
         assertTrue(empty.equals(""));
