@@ -62,7 +62,7 @@ let $rt_substring = (string, start, end) => {
 }
 let $rt_substringSink = 0;
 
-let $rt_str = str =>  str === null ? null : teavm_javaConstructor("java.lang.String", "(Ljava/lang/Object;)V")(str);
+let $rt_str = str =>  str == null ? null : teavm_javaConstructor("java.lang.String", "(Ljava/lang/Object;)V")(str);
 let $rt_ustr = str =>  str === null ? null : str[teavm_javaField("java.lang.String", "nativeString")];
 
 let $rt_stringClassInit = () => teavm_javaClassInit("java.lang.String")();
