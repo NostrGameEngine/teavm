@@ -53,6 +53,45 @@ public class StringTest {
     }
 
     @Test
+    public void comparisonReturnsExactUtf16Difference() {
+        for (int length : new int[] { 1, 16, 64, 257, 1024 }) {
+            char[] leftChars = new char[length];
+            for (int i = 0; i < length; i++) {
+                leftChars[i] = (char) (i * 8191);
+            }
+            String left = new String(leftChars);
+            assertEquals(0, left.compareTo(new String(leftChars)));
+            for (int i = 0; i < length; i++) {
+                char original = leftChars[i];
+                leftChars[i] ^= 0xffff;
+                String right = new String(leftChars);
+                int difference = original - leftChars[i];
+                assertEquals(difference, left.compareTo(right));
+                assertEquals(-difference, right.compareTo(left));
+                leftChars[i] = original;
+            }
+            assertEquals(-3, left.compareTo(left + "xyz"));
+            assertEquals(3, (left + "xyz").compareTo(left));
+        }
+    }
+
+    @Test
+    public void comparisonHandlesEmptySlicesAndNull() {
+        assertEquals(0, "".compareTo(new String(new char[0])));
+        assertEquals(-2, "".compareTo("ab"));
+        assertEquals(2, "ab".compareTo(""));
+        String slice = new String(new char[] { 'x', 0, 0xd800, 0xdc00, 0xffff, 'y' }, 1, 4);
+        assertEquals(0, slice.compareTo(new String(slice.toCharArray())));
+        assertEquals(0, slice.compareTo(("x" + slice + "y").substring(1, 5)));
+        try {
+            slice.compareTo(null);
+            throw new AssertionError("Null comparison succeeded");
+        } catch (NullPointerException expected) {
+            // The public method must retain Java's null check.
+        }
+    }
+
+    @Test
     public void equalityHandlesEmptyNullAndOtherTypes() {
         String empty = new String(new char[0]);
         assertTrue(empty.equals(""));

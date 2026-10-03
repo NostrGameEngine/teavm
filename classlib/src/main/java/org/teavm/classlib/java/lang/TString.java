@@ -246,7 +246,9 @@ public final class TString extends TObject implements TSerializable, TComparable
         if (this == anotherString) {
             return 0;
         }
-        int l = TMath.min(length(), anotherString.length());
+        int length = charactersLength();
+        int otherLength = anotherString.charactersLength();
+        int l = TMath.min(length, otherLength);
         for (int i = 0; i < l; ++i) {
             char a = charactersGet(i);
             char b = anotherString.charactersGet(i);
@@ -254,7 +256,7 @@ public final class TString extends TObject implements TSerializable, TComparable
                 return a - b;
             }
         }
-        return length() - anotherString.length();
+        return length - otherLength;
     }
 
     public int compareToIgnoreCase(TString anotherString) {
