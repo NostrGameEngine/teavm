@@ -15,6 +15,7 @@
  */
 
 import { createScheduler, SchedulerOptions } from "./scheduler";
+import { createStringCache } from "./strings";
 
 // --- Interfaces ---
 
@@ -632,7 +633,10 @@ function jsoImports(imports: Record<string, any>, context: Context, stringBuilti
             `}\n`
         )(c) as Function;
     }
+    const stringCache = createStringCache();
     imports.teavmJso = {
+        getCachedString: stringCache.get,
+        cacheString: stringCache.put,
         stringBuiltinsSupported: (): boolean => stringBuiltins,
         isUndefined: (o: unknown): boolean => typeof o === "undefined",
         emptyArray: () => [],

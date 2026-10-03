@@ -29,8 +29,17 @@ final class WasmGCJSRuntime {
         if (str == null) {
             return null;
         }
+        var characters = CharArrayData.of(str);
+        var length = str.length();
+        if (length >= 4096) {
+            var cached = getCachedString(characters);
+            if (cached != null) {
+                return cached;
+            }
+        }
         if (stringBuiltinsSupported) {
-            return stringFromCharArray(CharArrayData.of(str), 0, str.length()).toNullable();
+            var result = stringFromCharArray(characters, 0, length).toNullable();
+            return result;
         } else {
             if (str.isEmpty()) {
                 return substring(stringFromCharCode(32).toNullable(), 0, 0).toNullable();
@@ -57,8 +66,17 @@ final class WasmGCJSRuntime {
                 chars.put(i, code);
             }
         }
+        if (length >= 4096) {
+            cacheString(chars, obj);
+        }
         return chars.asString();
     }
+
+    @Import(name = "getCachedString", module = "teavmJso")
+    private static native JSObject getCachedString(CharArrayData data);
+
+    @Import(name = "cacheString", module = "teavmJso")
+    private static native void cacheString(CharArrayData data, JSObject value);
 
     @Import(name = "length", module = "wasm:js-string")
     static native int stringLength(JSObject str);
