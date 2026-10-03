@@ -113,6 +113,50 @@ public class TArrayList<E> extends TAbstractList<E> implements TCloneable, TSeri
         return size;
     }
 
+    @Override
+    public boolean contains(Object o) {
+        return indexOf(o) >= 0;
+    }
+
+    @Override
+    public int indexOf(Object o) {
+        E[] elements = array;
+        int end = size;
+        if (o == null) {
+            for (int i = 0; i < end; i++) {
+                if (elements[i] == null) {
+                    return i;
+                }
+            }
+        } else {
+            for (int i = 0; i < end; i++) {
+                if (o.equals(elements[i])) {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+
+    @Override
+    public int lastIndexOf(Object o) {
+        E[] elements = array;
+        if (o == null) {
+            for (int i = size - 1; i >= 0; i--) {
+                if (elements[i] == null) {
+                    return i;
+                }
+            }
+        } else {
+            for (int i = size - 1; i >= 0; i--) {
+                if (o.equals(elements[i])) {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+
     @Rename("clone")
     public TObject clone0() {
         return new TArrayList<>(this);

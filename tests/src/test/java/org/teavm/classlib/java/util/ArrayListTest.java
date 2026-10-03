@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
@@ -38,6 +39,140 @@ import org.teavm.junit.TeaVMTest;
 
 @TeaVMTest
 public class ArrayListTest {
+    @Test
+    public void searchesLogicalElementsAndNulls() {
+        ArrayList<String> list = new ArrayList<>(32);
+        assertFalse(list.contains(null));
+        assertEquals(-1, list.indexOf(null));
+        assertEquals(-1, list.lastIndexOf(null));
+        list.addAll(Arrays.asList("a", null, "b", "a", null));
+        assertTrue(list.contains("a"));
+        assertTrue(list.contains(null));
+        assertFalse(list.contains("missing"));
+        assertEquals(0, list.indexOf("a"));
+        assertEquals(3, list.lastIndexOf("a"));
+        assertEquals(1, list.indexOf(null));
+        assertEquals(4, list.lastIndexOf(null));
+        list.remove(4);
+        assertEquals(1, list.lastIndexOf(null));
+        list.clear();
+        assertFalse(list.contains(null));
+        assertEquals(-1, list.lastIndexOf("a"));
+    }
+
+    @Test
+    public void searchesInvokeQueryEqualityInEncounterOrder() {
+        ArrayList<Object> list = new ArrayList<>(Arrays.asList("a", null, "b", "a"));
+        List<Object> visited = new ArrayList<>();
+        Object query = new Object() {
+            @Override
+            public boolean equals(Object other) {
+                visited.add(other);
+                return "a".equals(other);
+            }
+        };
+        assertTrue(list.contains(query));
+        assertEquals(Arrays.asList("a"), visited);
+        visited.clear();
+        assertEquals(0, list.indexOf(query));
+        assertEquals(Arrays.asList("a"), visited);
+        visited.clear();
+        assertEquals(3, list.lastIndexOf(query));
+        assertEquals(Arrays.asList("a"), visited);
+        list.set(3, "c");
+        visited.clear();
+        assertEquals(3, Collections.unmodifiableList(list).lastIndexOf(new Object() {
+            @Override
+            public boolean equals(Object other) {
+                visited.add(other);
+                return "c".equals(other);
+            }
+        }));
+        assertEquals(Arrays.asList("c"), visited);
+    }
+
+    @Test
+    public void missingSearchVisitsNullsInBothDirections() {
+        List<Object> visited = new ArrayList<>();
+        Object query = new Object() {
+            @Override
+            public boolean equals(Object other) {
+                visited.add(other);
+                return false;
+            }
+        };
+        List<Object> list = new ArrayList<>(Arrays.asList("a", null, "b"));
+        assertEquals(-1, list.indexOf(query));
+        assertEquals(Arrays.asList("a", null, "b"), visited);
+        visited.clear();
+        assertEquals(-1, list.lastIndexOf(query));
+        assertEquals(Arrays.asList("b", null, "a"), visited);
+    }
+
+    @Test
+    public void searchDoesNotSkipEqualityForIdenticalReferences() {
+        int[] calls = { 0 };
+        Object value = new Object() {
+            @Override
+            public boolean equals(Object other) {
+                calls[0]++;
+                return this == other;
+            }
+        };
+        ArrayList<Object> list = new ArrayList<>(Arrays.asList(value));
+        assertTrue(list.contains(value));
+        assertEquals(0, list.indexOf(value));
+        assertEquals(0, list.lastIndexOf(value));
+        assertEquals(3, calls[0]);
+    }
+
+    @Test
+    public void containsHonorsOverriddenIndexOf() {
+        ArrayList<Object> list = new ArrayList<>() {
+            @Override
+            public int indexOf(Object value) {
+                return "virtual".equals(value) ? 0 : -1;
+            }
+        };
+        assertTrue(list.contains("virtual"));
+        assertFalse(list.contains("missing"));
+        assertTrue(Collections.unmodifiableList(list).contains("virtual"));
+    }
+
+    @Test
+    public void searchPropagatesQueryExceptionWithoutChangingList() {
+        RuntimeException expected = new RuntimeException("query");
+        Object query = new Object() {
+            @Override
+            public boolean equals(Object other) {
+                throw expected;
+            }
+        };
+        ArrayList<Object> list = new ArrayList<>(Arrays.asList("a", "b"));
+        try {
+            list.contains(query);
+            fail("Expected query exception");
+        } catch (RuntimeException e) {
+            assertSame(expected, e);
+        }
+        assertEquals(Arrays.asList("a", "b"), list);
+    }
+
+    @Test
+    public void removalUsesQueryEqualityAndRemovesFirstMatch() {
+        ArrayList<Object> list = new ArrayList<>(Arrays.asList("a", null, "a"));
+        Object query = new Object() {
+            @Override
+            public boolean equals(Object other) {
+                return "a".equals(other);
+            }
+        };
+        assertTrue(list.remove(query));
+        assertEquals(Arrays.asList(null, "a"), list);
+        assertTrue(list.remove(null));
+        assertEquals(Arrays.asList("a"), list);
+    }
+
     @Test
     public void copyConstructorPreservesNullsAndOwnsStorage() {
         ArrayList<Object> source = new ArrayList<>(32);
