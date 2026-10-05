@@ -139,6 +139,26 @@ public class StringInteropTest {
         }
     }
 
+    @Test
+    public void transfersPreserveOwnershipAcrossCacheAdmissionBoundaries() {
+        for (int length : new int[] { 0, 4095, 4096, 4097, 262144, 262145 }) {
+            char[] characters = new char[length];
+            for (int i = 0; i < length; ++i) {
+                characters[i] = (char) (i * 257);
+            }
+            String owned = new String(characters);
+            JSObject container = holder(owned);
+            String imported = read(container);
+            write(container, "replacement");
+            java.util.Arrays.fill(characters, 'x');
+            for (int repetition = 0; repetition < 3; ++repetition) {
+                assertEquals(owned, roundTrip(owned));
+                assertEquals(owned, roundTrip(imported));
+                assertEquals(owned, roundTrip(new String(imported)));
+            }
+        }
+    }
+
     @JSBody(params = "value", script = "return value;")
     private static native String roundTrip(String value);
 

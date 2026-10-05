@@ -27,6 +27,7 @@ final class WasmGCJSRuntime {
 
     private static final int MAX_CACHED_UNITS = 262144;
     private static final int MAX_CACHED_STRINGS = 64;
+    private static final int MIN_CACHED_UNITS = 4096;
     private static final CachedString[] cachedStrings = new CachedString[MAX_CACHED_STRINGS];
 
     private static final class CachedString {
@@ -38,6 +39,7 @@ final class WasmGCJSRuntime {
             this.value = value;
         }
     }
+
     private static int firstCachedString;
     private static int cachedStringCount;
     private static int cachedUnits;
@@ -48,7 +50,7 @@ final class WasmGCJSRuntime {
         }
         var characters = CharArrayData.of(str);
         var length = str.length();
-        if (length >= 4096) {
+        if (length >= MIN_CACHED_UNITS && length <= MAX_CACHED_UNITS) {
             for (var i = 0; i < cachedStringCount; ++i) {
                 var index = (firstCachedString + i) % MAX_CACHED_STRINGS;
                 if (cachedStrings[index].string == str) {
@@ -57,8 +59,7 @@ final class WasmGCJSRuntime {
             }
         }
         if (stringBuiltinsSupported) {
-            var result = stringFromCharArray(characters, 0, length).toNullable();
-            return result;
+            return cacheExport(str, stringFromCharArray(characters, 0, length).toNullable());
         } else {
             if (str.isEmpty()) {
                 return substring(stringFromCharCode(32).toNullable(), 0, 0).toNullable();
@@ -67,7 +68,7 @@ final class WasmGCJSRuntime {
             for (var i = 1; i < str.length(); ++i) {
                 result = concatStrings(result, stringFromCharCode(str.charAt(i)).toNullable()).toNullable();
             }
-            return result;
+            return cacheExport(str, result);
         }
     }
 
@@ -85,10 +86,13 @@ final class WasmGCJSRuntime {
                 chars.put(i, code);
             }
         }
-        var result = chars.asString();
-        // Keep Java ownership and identity entirely inside Wasm. Exporting each
-        // character array as a JS Map key increases the host allocator's RSS.
-        if (length >= 4096 && length <= MAX_CACHED_UNITS && isNativeString(obj)) {
+        // Do not retain native inputs: even a small substring can keep a large host buffer alive.
+        return chars.asString();
+    }
+
+    private static JSObject cacheExport(String string, JSObject value) {
+        var length = string.length();
+        if (length >= MIN_CACHED_UNITS && length <= MAX_CACHED_UNITS) {
             while (cachedStringCount == MAX_CACHED_STRINGS || cachedUnits + length > MAX_CACHED_UNITS) {
                 cachedUnits -= cachedStrings[firstCachedString].string.length();
                 cachedStrings[firstCachedString] = null;
@@ -96,15 +100,12 @@ final class WasmGCJSRuntime {
                 --cachedStringCount;
             }
             var index = (firstCachedString + cachedStringCount) % MAX_CACHED_STRINGS;
-            cachedStrings[index] = new CachedString(result, obj);
+            cachedStrings[index] = new CachedString(string, value);
             cachedUnits += length;
             ++cachedStringCount;
         }
-        return result;
+        return value;
     }
-
-    @Import(name = "isNativeString", module = "teavmJso")
-    private static native boolean isNativeString(JSObject value);
 
     @Import(name = "length", module = "wasm:js-string")
     static native int stringLength(JSObject str);

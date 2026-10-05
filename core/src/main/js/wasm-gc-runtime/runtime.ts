@@ -633,7 +633,6 @@ function jsoImports(imports: Record<string, any>, context: Context, stringBuilti
         )(c) as Function;
     }
     imports.teavmJso = {
-        isNativeString: (value: unknown): boolean => typeof value === "string",
         stringBuiltinsSupported: (): boolean => stringBuiltins,
         isUndefined: (o: unknown): boolean => typeof o === "undefined",
         emptyArray: () => [],
