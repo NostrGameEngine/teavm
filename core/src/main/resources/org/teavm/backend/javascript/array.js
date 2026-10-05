@@ -15,6 +15,13 @@
  */
 "use strict";
 
+let $rt_checkArraySize = sz => {
+    if (sz < 0) {
+        $rt_throw(teavm_javaConstructor("java.lang.NegativeArraySizeException", "()V")());
+    }
+    return sz;
+}
+
 let $rt_createArray = (cls, sz) => {
     // Array literals keep small reference arrays packed without growing a push buffer.
     let data;
@@ -53,58 +60,59 @@ let $rt_createArray = (cls, sz) => {
             data = [null, null, null, null, null, null, null, null, null, null];
             break;
         default:
+            $rt_checkArraySize(sz);
             data = new teavm_globals.Array(sz);
             data.fill(null);
     }
     return new ($rt_arraycls(cls))(data);
 }
 let $rt_wrapArray = (cls, data) => new ($rt_arraycls(cls))(data);
-let $rt_createUnfilledArray = (cls, sz) => new ($rt_arraycls(cls))(new teavm_globals.Array(sz));
-let $rt_createLongArray = sz => new $rt_longArrayCls(new teavm_globals.BigInt64Array(sz));
+let $rt_createUnfilledArray = (cls, sz) => new ($rt_arraycls(cls))(new teavm_globals.Array($rt_checkArraySize(sz)));
+let $rt_createLongArray = sz => new $rt_longArrayCls(new teavm_globals.BigInt64Array($rt_checkArraySize(sz)));
 let $rt_createLongArrayFromData = data => {
     let buffer = new teavm_globals.BigInt64Array(data.length);
     buffer.set(data);
     return new $rt_longArrayCls(buffer);
 };
 
-let $rt_createCharArray = sz => new $rt_charArrayCls(new teavm_globals.Uint16Array(sz));
+let $rt_createCharArray = sz => new $rt_charArrayCls(new teavm_globals.Uint16Array($rt_checkArraySize(sz)));
 let $rt_createCharArrayFromData = data => {
     let buffer = new teavm_globals.Uint16Array(data.length);
     buffer.set(data);
     return new $rt_charArrayCls(buffer);
 }
-let $rt_createByteArray = sz => new $rt_byteArrayCls(new teavm_globals.Int8Array(sz));
+let $rt_createByteArray = sz => new $rt_byteArrayCls(new teavm_globals.Int8Array($rt_checkArraySize(sz)));
 let $rt_createByteArrayFromData = data => {
     let buffer = new teavm_globals.Int8Array(data.length);
     buffer.set(data);
     return new $rt_byteArrayCls(buffer);
 }
-let $rt_createShortArray = sz => new $rt_shortArrayCls(new teavm_globals.Int16Array(sz));
+let $rt_createShortArray = sz => new $rt_shortArrayCls(new teavm_globals.Int16Array($rt_checkArraySize(sz)));
 let $rt_createShortArrayFromData = data => {
     let buffer = new teavm_globals.Int16Array(data.length);
     buffer.set(data);
     return new $rt_shortArrayCls(buffer);
 }
-let $rt_createIntArray = sz => new $rt_intArrayCls(new teavm_globals.Int32Array(sz));
+let $rt_createIntArray = sz => new $rt_intArrayCls(new teavm_globals.Int32Array($rt_checkArraySize(sz)));
 let $rt_createIntArrayFromData = data => {
     let buffer = new teavm_globals.Int32Array(data.length);
     buffer.set(data);
     return new $rt_intArrayCls(buffer);
 }
-let $rt_createBooleanArray = sz => new $rt_booleanArrayCls(new teavm_globals.Int8Array(sz));
+let $rt_createBooleanArray = sz => new $rt_booleanArrayCls(new teavm_globals.Int8Array($rt_checkArraySize(sz)));
 let $rt_createBooleanArrayFromData = data => {
     let buffer = new teavm_globals.Int8Array(data.length);
     buffer.set(data);
     return new $rt_booleanArrayCls(buffer);
 }
 
-let $rt_createFloatArray = sz => new $rt_floatArrayCls(new teavm_globals.Float32Array(sz));
+let $rt_createFloatArray = sz => new $rt_floatArrayCls(new teavm_globals.Float32Array($rt_checkArraySize(sz)));
 let $rt_createFloatArrayFromData = data => {
     let buffer = new teavm_globals.Float32Array(data.length);
     buffer.set(data);
     return new $rt_floatArrayCls(buffer);
 }
-let $rt_createDoubleArray = sz => new $rt_doubleArrayCls(new teavm_globals.Float64Array(sz));
+let $rt_createDoubleArray = sz => new $rt_doubleArrayCls(new teavm_globals.Float64Array($rt_checkArraySize(sz)));
 let $rt_createDoubleArrayFromData = data => {
     let buffer = new teavm_globals.Float64Array(data.length);
     buffer.set(data);
@@ -157,6 +165,10 @@ let $rt_createArrayClass = cls => {
     return JavaArray;
 }
 let $rt_createMultiArray = (cls, dimensions) => {
+    // Java validates every dimension, even when an outer dimension is zero.
+    for (let i = 0; i < dimensions.length; ++i) {
+        $rt_checkArraySize(dimensions[i]);
+    }
     let first = 0;
     for (let i = dimensions.length - 1; i >= 0; i = (i - 1) | 0) {
         if (dimensions[i] === 0) {
@@ -268,6 +280,9 @@ let $rt_createDoubleMultiArray = dimensions => {
     return $rt_createMultiArrayImpl($rt_doublecls, arrays, dimensions, 0);
 }
 let $rt_primitiveArrayCount = (dimensions, start) => {
+    for (let i = 0; i < dimensions.length; ++i) {
+        $rt_checkArraySize(dimensions[i]);
+    }
     let val = dimensions[start + 1] | 0;
     for (let i = start + 2; i < dimensions.length; i = (i + 1) | 0) {
         val = (val * (dimensions[i] | 0)) | 0;

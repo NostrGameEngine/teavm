@@ -36,6 +36,10 @@ public class WasmGCSupport {
         return new ClassCastException();
     }
 
+    public static void throwNegativeArraySizeException() {
+        throw new NegativeArraySizeException();
+    }
+
     public static void throwCloneNotSupportedException() throws CloneNotSupportedException {
         throw new CloneNotSupportedException();
     }

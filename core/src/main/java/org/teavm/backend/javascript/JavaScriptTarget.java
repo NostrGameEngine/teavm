@@ -282,6 +282,12 @@ public class JavaScriptTarget implements TeaVMTarget, TeaVMJavaScriptHost {
         exceptionCons.getVariable(1).propagate(stringType);
         exceptionCons.use();
 
+        exceptionCons = dependencyAnalyzer.linkMethod(new MethodReference(
+                NegativeArraySizeException.class, "<init>", void.class));
+        exceptionCons.getVariable(0).propagate(dependencyAnalyzer.getClassType(
+                NegativeArraySizeException.class.getName()));
+        exceptionCons.use();
+
         if (strict) {
             exceptionCons = dependencyAnalyzer.linkMethod(new MethodReference(
                     ArrayIndexOutOfBoundsException.class, "<init>", void.class));
