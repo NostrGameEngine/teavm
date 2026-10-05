@@ -48,6 +48,9 @@ public class WasmTypeInferenceTest {
         var function = new WasmFunction(functionType);
         var inference = new WasmTypeInference();
 
+        new WasmStructNew(structure).acceptVisitor(inference);
+        assertSame(structure.getNonNullReference(), inference.typeStack.remove(0));
+
         new WasmStructNewDefault(structure).acceptVisitor(inference);
         assertSame(structure.getNonNullReference(), inference.typeStack.remove(0));
 
@@ -64,5 +67,34 @@ public class WasmTypeInferenceTest {
         inference.typeStack.add(WasmType.INT32);
         new WasmInt31Reference().acceptVisitor(inference);
         assertSame(WasmType.I31.asNonNull(), inference.typeStack.remove(0));
+    }
+
+    @Test
+    public void coroutineInferenceKeepsAllocationResultsNullable() {
+        var structure = new WasmStructure("Structure");
+        var array = new WasmArray("Array", WasmType.INT32.asStorage());
+        var functionType = new WasmFunctionType("Function", (WasmType) null, List.of());
+        var function = new WasmFunction(functionType);
+        var inference = new WasmTypeInference(true);
+
+        new WasmStructNew(structure).acceptVisitor(inference);
+        assertSame(structure.getReference(), inference.typeStack.remove(0));
+
+        new WasmStructNewDefault(structure).acceptVisitor(inference);
+        assertSame(structure.getReference(), inference.typeStack.remove(0));
+
+        inference.typeStack.add(WasmType.INT32);
+        new WasmArrayNewDefault(array).acceptVisitor(inference);
+        assertSame(array.getReference(), inference.typeStack.remove(0));
+
+        new WasmArrayNewFixed(array, 0).acceptVisitor(inference);
+        assertSame(array.getReference(), inference.typeStack.remove(0));
+
+        new WasmFunctionReference(function).acceptVisitor(inference);
+        assertSame(functionType.getReference(), inference.typeStack.remove(0));
+
+        inference.typeStack.add(WasmType.INT32);
+        new WasmInt31Reference().acceptVisitor(inference);
+        assertSame(WasmType.I31, inference.typeStack.remove(0));
     }
 }

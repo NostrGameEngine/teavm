@@ -96,6 +96,6 @@ public class CleanerTest {
         for (var i = 0; i < 20 && counter[0] == 0; ++i) {
             Thread.sleep(50);
         }
-        assertEquals("cleaner action was not executed", 1, counter[0]);
+        assertEquals(1, counter[0], "cleaner action was not executed");
     }
 }

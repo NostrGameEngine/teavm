@@ -35,25 +35,33 @@ import org.teavm.junit.TeaVMTest;
 public class SystemTest {
     private Object[] covariantDestination;
 
-    @Test(expected = ArrayStoreException.class)
+    @Test
     public void rejectsNonArraySource() {
-        System.arraycopy(new Object(), 0, new Object[0], 0, 0);
+        assertThrows(ArrayStoreException.class, () -> {
+            System.arraycopy(new Object(), 0, new Object[0], 0, 0);
+        });
     }
 
-    @Test(expected = ArrayStoreException.class)
+    @Test
     public void rejectsNonArrayDestination() {
-        System.arraycopy(new Object[0], 0, new Object(), 0, 0);
+        assertThrows(ArrayStoreException.class, () -> {
+            System.arraycopy(new Object[0], 0, new Object(), 0, 0);
+        });
     }
 
-    @Test(expected = ArrayStoreException.class)
+    @Test
     public void rejectsIdenticalNonArrayArguments() {
-        Object value = new Object();
-        System.arraycopy(value, 0, value, 0, 0);
+        assertThrows(ArrayStoreException.class, () -> {
+            Object value = new Object();
+            System.arraycopy(value, 0, value, 0, 0);
+        });
     }
 
-    @Test(expected = ArrayStoreException.class)
+    @Test
     public void rejectsEmptyCopyBetweenPrimitiveAndReferenceArrays() {
-        System.arraycopy(new int[0], 0, new Object[0], 0, 0);
+        assertThrows(ArrayStoreException.class, () -> {
+            System.arraycopy(new int[0], 0, new Object[0], 0, 0);
+        });
     }
 
     @Test
@@ -80,19 +88,25 @@ public class SystemTest {
         assertArrayEquals(new String[] { null, "value", null }, destination);
     }
 
-    @Test(expected = ArrayStoreException.class)
+    @Test
     public void rejectsDifferentPrimitiveArrayTypes() {
-        System.arraycopy(new int[] { 1 }, 0, new float[1], 0, 1);
+        assertThrows(ArrayStoreException.class, () -> {
+            System.arraycopy(new int[] { 1 }, 0, new float[1], 0, 1);
+        });
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     public void rejectsOverflowingCopyRange() {
-        System.arraycopy(new int[1], Integer.MAX_VALUE, new int[1], 0, 1);
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            System.arraycopy(new int[1], Integer.MAX_VALUE, new int[1], 0, 1);
+        });
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     public void rejectsOverflowingDestinationRange() {
-        System.arraycopy(new int[1], 0, new int[1], Integer.MAX_VALUE, 1);
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            System.arraycopy(new int[1], 0, new int[1], Integer.MAX_VALUE, 1);
+        });
     }
 
     @Test

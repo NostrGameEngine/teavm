@@ -15,20 +15,20 @@
  */
 package org.teavm.jso.test;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.Test;
 import org.teavm.jso.JSBody;
 import org.teavm.jso.JSObject;
 import org.teavm.junit.EachTestCompiledSeparately;
 import org.teavm.junit.OnlyPlatform;
 import org.teavm.junit.SkipJVM;
-import org.teavm.junit.TeaVMTestRunner;
+import org.teavm.junit.TeaVMTest;
 import org.teavm.junit.TestPlatform;
 
-@RunWith(TeaVMTestRunner.class)
+@TeaVMTest
 @SkipJVM
 @OnlyPlatform({TestPlatform.JAVASCRIPT, TestPlatform.WEBASSEMBLY_GC})
 @EachTestCompiledSeparately
@@ -62,14 +62,18 @@ public class StringArrayConversionTest {
         assertEquals("second", strings[1]);
     }
 
-    @Test(expected = ClassCastException.class)
+    @Test
     public void rejectsNumberElements() {
-        assertEquals("invalid", readNonStringArray()[0]);
+        assertThrows(ClassCastException.class, () -> {
+            assertEquals("invalid", readNonStringArray()[0]);
+        });
     }
 
-    @Test(expected = ClassCastException.class)
+    @Test
     public void rejectsBoxedStringElements() {
-        assertEquals("invalid", readBoxedStringArray()[0]);
+        assertThrows(ClassCastException.class, () -> {
+            assertEquals("invalid", readBoxedStringArray()[0]);
+        });
     }
 
     @Test

@@ -15,17 +15,17 @@
  */
 package org.teavm.classlib.java.lang;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.lang.reflect.Array;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.teavm.junit.TeaVMTestRunner;
+import org.junit.jupiter.api.Test;
+import org.teavm.junit.TeaVMTest;
 
-@RunWith(TeaVMTestRunner.class)
+@TeaVMTest
 public class SmallReferenceArrayTest {
     @Test
     public void initializesEverySlotToNull() {
@@ -103,13 +103,17 @@ public class SmallReferenceArrayTest {
         assertNull(nested[2]);
     }
 
-    @Test(expected = NegativeArraySizeException.class)
+    @Test
     public void rejectsNegativeDynamicLength() {
-        Array.newInstance(String.class, -1);
+        assertThrows(NegativeArraySizeException.class, () -> {
+            Array.newInstance(String.class, -1);
+        });
     }
 
-    @Test(expected = ArrayIndexOutOfBoundsException.class)
+    @Test
     public void checksReflectiveBounds() {
-        Array.set(new String[3], 3, "outside");
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> {
+            Array.set(new String[3], 3, "outside");
+        });
     }
 }

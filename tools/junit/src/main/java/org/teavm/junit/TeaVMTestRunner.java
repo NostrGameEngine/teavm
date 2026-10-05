@@ -179,7 +179,7 @@ public class TeaVMTestRunner extends Runner implements Filterable {
         Set<MethodDescriptor> foundMethods = new HashSet<>();
         while (cls != Object.class && !cls.getName().equals(JUNIT3_BASE_CLASS)) {
             for (Method method : cls.getDeclaredMethods()) {
-                if (foundMethods.add(getDescriptor(method)) && isTestMethod(method)) {
+                if (foundMethods.add(TeaVMTestExecutionSupport.getDescriptor(method)) && isTestMethod(method)) {
                     children.add(method);
                 }
             }

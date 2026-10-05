@@ -264,9 +264,11 @@ public class ArrayListTest {
         }
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void toArrayRejectsNullTarget() {
-        new ArrayList<String>().toArray((String[]) null);
+        assertThrows(NullPointerException.class, () -> {
+            new ArrayList<String>().toArray((String[]) null);
+        });
     }
 
     @Test

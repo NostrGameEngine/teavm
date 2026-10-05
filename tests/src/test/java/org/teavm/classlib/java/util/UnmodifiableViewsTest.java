@@ -15,14 +15,15 @@
  */
 package org.teavm.classlib.java.util;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,11 +40,10 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.RandomAccess;
 import java.util.Set;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.teavm.junit.TeaVMTestRunner;
+import org.junit.jupiter.api.Test;
+import org.teavm.junit.TeaVMTest;
 
-@RunWith(TeaVMTestRunner.class)
+@TeaVMTest
 public class UnmodifiableViewsTest {
     @Test
     public void preservesRandomAccessAndSubListViews() {
@@ -79,26 +79,32 @@ public class UnmodifiableViewsTest {
         assertFalse(iterator.hasNext());
     }
 
-    @Test(expected = ConcurrentModificationException.class)
+    @Test
     public void iteratorRetainsBackingFailFastChecks() {
-        List<String> backing = new ArrayList<>(Arrays.asList("a", "b"));
-        Iterator<String> iterator = Collections.unmodifiableList(backing).iterator();
-        backing.add("c");
-        iterator.next();
+        assertThrows(ConcurrentModificationException.class, () -> {
+            List<String> backing = new ArrayList<>(Arrays.asList("a", "b"));
+            Iterator<String> iterator = Collections.unmodifiableList(backing).iterator();
+            backing.add("c");
+            iterator.next();
+        });
     }
 
-    @Test(expected = ConcurrentModificationException.class)
+    @Test
     public void listIteratorRetainsBackingFailFastChecks() {
-        List<String> backing = new ArrayList<>(Arrays.asList("a", "b"));
-        ListIterator<String> iterator = Collections.unmodifiableList(backing).listIterator();
-        backing.add("c");
-        iterator.next();
+        assertThrows(ConcurrentModificationException.class, () -> {
+            List<String> backing = new ArrayList<>(Arrays.asList("a", "b"));
+            ListIterator<String> iterator = Collections.unmodifiableList(backing).listIterator();
+            backing.add("c");
+            iterator.next();
+        });
     }
 
-    @Test(expected = NoSuchElementException.class)
+    @Test
     public void exhaustedIteratorHasTheCorrectException() {
-        Iterator<String> iterator = Collections.unmodifiableList(new ArrayList<String>()).iterator();
-        iterator.next();
+        assertThrows(NoSuchElementException.class, () -> {
+            Iterator<String> iterator = Collections.unmodifiableList(new ArrayList<String>()).iterator();
+            iterator.next();
+        });
     }
 
     @Test
@@ -116,14 +122,18 @@ public class UnmodifiableViewsTest {
         assertArrayEquals(new String[] { "a", "b" }, view.toArray(new String[0]));
     }
 
-    @Test(expected = ArrayStoreException.class)
+    @Test
     public void typedArrayCopiesCheckComponentTypes() {
-        Collections.unmodifiableList(Arrays.asList("a")).toArray(new Integer[0]);
+        assertThrows(ArrayStoreException.class, () -> {
+            Collections.unmodifiableList(Arrays.asList("a")).toArray(new Integer[0]);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void typedArrayCopiesRejectNullDestinations() {
-        Collections.unmodifiableList(Arrays.asList("a")).toArray((Object[]) null);
+        assertThrows(NullPointerException.class, () -> {
+            Collections.unmodifiableList(Arrays.asList("a")).toArray((Object[]) null);
+        });
     }
 
     @Test
@@ -401,28 +411,36 @@ public class UnmodifiableViewsTest {
         assertUnsupported(() -> entry.setValue("bad"));
     }
 
-    @Test(expected = ArrayStoreException.class)
+    @Test
     public void mapValueArrayCopiesCheckComponentTypes() {
-        Map<String, String> map = new HashMap<>();
-        map.put("a", "one");
-        Collections.unmodifiableMap(map).values().toArray(new Integer[0]);
+        assertThrows(ArrayStoreException.class, () -> {
+            Map<String, String> map = new HashMap<>();
+            map.put("a", "one");
+            Collections.unmodifiableMap(map).values().toArray(new Integer[0]);
+        });
     }
 
-    @Test(expected = ArrayStoreException.class)
+    @Test
     public void mapEntryArrayCopiesCheckComponentTypes() {
-        Map<String, String> map = new HashMap<>();
-        map.put("a", "one");
-        Collections.unmodifiableMap(map).entrySet().toArray(new String[0]);
+        assertThrows(ArrayStoreException.class, () -> {
+            Map<String, String> map = new HashMap<>();
+            map.put("a", "one");
+            Collections.unmodifiableMap(map).entrySet().toArray(new String[0]);
+        });
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     public void readOnlyListIteratorRejectsNegativeIndex() {
-        Collections.unmodifiableList(new ArrayList<>()).listIterator(-1);
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            Collections.unmodifiableList(new ArrayList<>()).listIterator(-1);
+        });
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     public void readOnlyListIteratorRejectsIndexPastEnd() {
-        Collections.unmodifiableList(new ArrayList<>()).listIterator(1);
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            Collections.unmodifiableList(new ArrayList<>()).listIterator(1);
+        });
     }
 
     @Test
@@ -446,12 +464,14 @@ public class UnmodifiableViewsTest {
         assertEquals("a", iterator.next());
     }
 
-    @Test(expected = ConcurrentModificationException.class)
+    @Test
     public void listIteratorInsertionChecksConcurrentModification() {
-        List<String> list = new ArrayList<>(Arrays.asList("a"));
-        ListIterator<String> iterator = list.listIterator();
-        list.add("b");
-        iterator.add("x");
+        assertThrows(ConcurrentModificationException.class, () -> {
+            List<String> list = new ArrayList<>(Arrays.asList("a"));
+            ListIterator<String> iterator = list.listIterator();
+            list.add("b");
+            iterator.add("x");
+        });
     }
 
     @Test

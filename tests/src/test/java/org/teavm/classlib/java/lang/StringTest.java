@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.UnsupportedEncodingException;
 import java.util.Locale;
@@ -32,9 +33,11 @@ import org.teavm.junit.TestPlatform;
 @TeaVMTest
 @EachTestCompiledSeparately
 public class StringTest {
-    @Test(expected = NullPointerException.class)
+    @Test
     public void nullStringCopyThrowsJavaException() {
-        new String((String) null);
+        assertThrows(NullPointerException.class, () -> {
+            new String((String) null);
+        });
     }
 
     @Test
@@ -62,7 +65,7 @@ public class StringTest {
         String original = "polygenelubricants";
         original.hashCode();
         String copy = new String(original);
-        org.junit.Assert.assertNotSame(original, copy);
+        org.junit.jupiter.api.Assertions.assertNotSame(original, copy);
         assertEquals(-2147483648, copy.hashCode());
     }
 
