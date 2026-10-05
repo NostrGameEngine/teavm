@@ -874,7 +874,7 @@ public class ClassGenerator {
             itemTypeExpr = "(TeaVM_Class*) &" + context.getNames().forClassInstance(itemType);
         } else if (type == ValueType.VOID) {
             parent = "NULL";
-            tag = 0;
+            tag = Integer.MAX_VALUE;
             sizeExpr = "0";
             itemTypeExpr = "NULL";
             flags = ClassGeneratorUtil.applyPrimitiveFlags(flags, type);
@@ -1413,10 +1413,8 @@ public class ClassGenerator {
 
         if (type instanceof ValueType.Object) {
             generateIsSuperclassFunction(((ValueType.Object) type).getClassName());
-        } else if (type instanceof ValueType.Primitive) {
-            generateIsSuperPrimitiveFunction((ValueType.Primitive) type);
-        } else if (type == ValueType.VOID) {
-            generateIsSuperclassFunction("java.lang.Void");
+        } else if (type instanceof ValueType.Primitive || type == ValueType.VOID) {
+            codeWriter.println("return supercls == cls;");
         } else if (type instanceof ValueType.Array) {
             generateIsSuperArrayFunction(((ValueType.Array) type).getItemType());
         }
@@ -1485,35 +1483,6 @@ public class ClassGenerator {
             codeWriter.println("return itemType == &" + context.getNames().forClassInstance(itemType) + ";");
         } else {
             codeWriter.println("return " + context.getNames().forSupertypeFunction(itemType) + "(itemType);");
-        }
-    }
-
-    private void generateIsSuperPrimitiveFunction(ValueType.Primitive primitive) {
-        switch (primitive.getKind()) {
-            case BOOLEAN:
-                generateIsSuperclassFunction("java.lang.Boolean");
-                break;
-            case BYTE:
-                generateIsSuperclassFunction("java.lang.Byte");
-                break;
-            case SHORT:
-                generateIsSuperclassFunction("java.lang.Short");
-                break;
-            case CHARACTER:
-                generateIsSuperclassFunction("java.lang.Character");
-                break;
-            case INTEGER:
-                generateIsSuperclassFunction("java.lang.Integer");
-                break;
-            case LONG:
-                generateIsSuperclassFunction("java.lang.Long");
-                break;
-            case FLOAT:
-                generateIsSuperclassFunction("java.lang.Float");
-                break;
-            case DOUBLE:
-                generateIsSuperclassFunction("java.lang.Double");
-                break;
         }
     }
 }

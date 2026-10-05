@@ -16,7 +16,9 @@
 package org.teavm.classlib.java.lang;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.Test;
@@ -85,6 +87,36 @@ public class InterfaceAssignabilityTest {
         assertFalse(long.class.isAssignableFrom(int.class));
         assertTrue(Base.class.isInstance(new Leaf()));
         assertFalse(Leaf.class.isInstance(new Base()));
+    }
+
+    @Test
+    public void primitiveClassesOnlyAcceptTheirOwnClass() {
+        Class<?>[] primitives = { boolean.class, byte.class, short.class, char.class, int.class,
+                long.class, float.class, double.class, void.class };
+        Class<?>[] wrappers = { Boolean.class, Byte.class, Short.class, Character.class, Integer.class,
+                Long.class, Float.class, Double.class, Void.class };
+        Object[] values = { true, (byte) 1, (short) 1, 'a', 1, 1L, 1F, 1D, new Object() };
+        for (int i = 0; i < primitives.length; ++i) {
+            for (int j = 0; j < primitives.length; ++j) {
+                assertTrue((i == j) == primitives[i].isAssignableFrom(primitives[j]));
+                assertFalse(primitives[i].isAssignableFrom(wrappers[j]));
+                assertFalse(wrappers[i].isAssignableFrom(primitives[j]));
+                assertFalse(primitives[i].isInstance(values[j]));
+                try {
+                    primitives[i].cast(values[j]);
+                    fail("Primitive class accepted an object");
+                } catch (ClassCastException expected) {
+                    assertNull(primitives[i].cast(null));
+                }
+            }
+            assertFalse(Object.class.isAssignableFrom(primitives[i]));
+            try {
+                primitives[i].isAssignableFrom(null);
+                fail("Null class was accepted");
+            } catch (NullPointerException expected) {
+                assertFalse(primitives[i].isInstance(null));
+            }
+        }
     }
 
     @Test
