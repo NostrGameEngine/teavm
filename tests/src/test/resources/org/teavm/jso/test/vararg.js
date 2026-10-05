@@ -39,3 +39,5 @@ function topLevelVararg(...args) {
     }
     return result;
 }
+
+const lexicalVararg = (...args) => "lex:" + args.map(String).join(":");

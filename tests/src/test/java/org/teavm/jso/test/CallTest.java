@@ -99,6 +99,15 @@ public class CallTest {
         assertEquals("tva", TestClass.topLevelVarargInt());
     }
 
+    @Test
+    @AttachJavaScript("org/teavm/jso/test/vararg.js")
+    public void lexicalGlobalVarargPreservesNullableStrings() {
+        String[] values = { null, "\u0080", "\ud800" };
+        assertEquals("lex:null:\u0080:\ud800", TestClass.lexicalVararg(values));
+        assertEquals("lex:", TestClass.lexicalVararg());
+        assertEquals("tva:head:null:\u0080:\ud800", TestClass.topLevelPrefixedVararg("head", values));
+    }
+
     @JSClass
     public static class TestClass implements JSObject {
         public static native String allVararg(String... args);
@@ -116,5 +125,12 @@ public class CallTest {
         @JSTopLevel
         @JSMethod("topLevelVararg")
         public static native String topLevelVarargInt(int... args);
+
+        @JSTopLevel
+        public static native String lexicalVararg(String... args);
+
+        @JSTopLevel
+        @JSMethod("topLevelVararg")
+        public static native String topLevelPrefixedVararg(String prefix, String... args);
     }
 }

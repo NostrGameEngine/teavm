@@ -870,6 +870,10 @@ public final class JS {
 
     @InjectedBy(JSNativeInjector.class)
     @PluggableDependency(JSNativeInjector.class)
+    public static native JSObject applyFunction(JSObject function, JSArray<JSObject> arguments);
+
+    @InjectedBy(JSNativeInjector.class)
+    @PluggableDependency(JSNativeInjector.class)
     @NoSideEffects
     @Import(name = "arrayOf1", module = "teavmJso")
     public static native JSObject arrayOf(JSObject a);

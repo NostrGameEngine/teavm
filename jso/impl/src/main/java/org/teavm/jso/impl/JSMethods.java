@@ -45,6 +45,8 @@ public final class JSMethods {
             JS_OBJECT, JS_OBJECT, ValueType.VOID);
     public static final MethodReference APPLY = new MethodReference(JS_CLASS, "apply", JS_OBJECT, JS_OBJECT,
             JS_ARRAY, JS_OBJECT);
+    public static final MethodReference APPLY_FUNCTION = new MethodReference(JS_CLASS, "applyFunction", JS_OBJECT,
+            JS_ARRAY, JS_OBJECT);
     public static final MethodReference FUNCTION = new MethodReference(JS_CLASS, "function", JS_OBJECT,
             JS_OBJECT, JS_OBJECT);
     public static final MethodReference ARRAY_DATA = new MethodReference(JS_CLASS, "arrayData",
