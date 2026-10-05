@@ -76,7 +76,7 @@ public class StringPoolGenerator {
     private boolean hasBadCharacters(String string) {
         for (int i = 0; i < string.length(); ++i) {
             char c = string.charAt(i);
-            if (c == 0 || Character.isSurrogate(c)) {
+            if (c == 0 || c >= 0x7f && c < 0xa0 || Character.isSurrogate(c)) {
                 return true;
             }
         }

@@ -119,6 +119,14 @@ public class StringTest {
     }
 
     @Test
+    public void stringPoolPreservesControlCharactersNextToDigits() {
+        String value = "\u007f7\u00808\u00859\u009f0\u00a0f";
+        char[] expected = { 0x7f, '7', 0x80, '8', 0x85, '9', 0x9f, '0', 0xa0, 'f' };
+        assertArrayEquals(expected, value.toCharArray());
+        assertSame(value, new String(expected).intern());
+    }
+
+    @Test
     public void comparisonReturnsExactUtf16Difference() {
         for (int length : new int[] { 1, 16, 64, 257, 1024 }) {
             char[] leftChars = new char[length];
