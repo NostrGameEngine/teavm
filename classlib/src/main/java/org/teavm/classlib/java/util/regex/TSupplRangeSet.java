@@ -124,7 +124,9 @@ class TSupplRangeSet extends TJointSet {
     public int matches(int stringIndex, CharSequence testString, TMatchResultImpl matchResult) {
         int strLength = matchResult.getRightBound();
 
-        if (stringIndex < strLength) {
+        if (stringIndex >= strLength) {
+            matchResult.hitEnd = true;
+        } else {
             char high = testString.charAt(stringIndex++);
 
             if (contains(high)) {
@@ -187,5 +189,13 @@ class TSupplRangeSet extends TJointSet {
     @Override
     public boolean hasConsumed(TMatchResultImpl mr) {
         return true;
+    }
+
+    @Override
+    void describe(TPatternWriter writer) {
+        if (alt != chars.alt) {
+            throw TPatternWriter.unsupported();
+        }
+        writer.create(this, TSupplRangeSet.class, "supplRangeSet", chars);
     }
 }

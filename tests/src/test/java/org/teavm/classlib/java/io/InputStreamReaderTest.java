@@ -15,8 +15,8 @@
  */
 package org.teavm.classlib.java.io;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -24,11 +24,10 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.teavm.junit.TeaVMTestRunner;
+import org.junit.jupiter.api.Test;
+import org.teavm.junit.TeaVMTest;
 
-@RunWith(TeaVMTestRunner.class)
+@TeaVMTest
 public class InputStreamReaderTest {
     @Test
     public void readsChars() throws IOException {
@@ -100,6 +99,20 @@ public class InputStreamReaderTest {
             assertEquals(0xA2, reader.read());
         }
         assertEquals(-1, reader.read());
+    }
+
+    @Test
+    public void readReturnsEofNotZeroAtCleanBoundary() throws IOException {
+        String str = "foo bar baz";
+        byte[] bytes = new byte[str.length()];
+        for (int i = 0; i < str.length(); ++i) {
+            bytes[i] = (byte) str.charAt(i);
+        }
+        var stream = new ByteArrayInputStream(bytes);
+        var reader = new InputStreamReader(stream, StandardCharsets.UTF_8);
+        char[] chars = new char[str.length()];
+        assertEquals(str.length(), reader.read(chars, 0, chars.length));
+        assertEquals(-1, reader.read(chars, 0, chars.length));
     }
 
     @Test

@@ -20,19 +20,34 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 class CRunStrategy implements TestRunStrategy {
     private String compilerCommand;
     private String wrapperCommand;
+    private String envScript;
+    private Map<String, String> capturedEnvironment;
     private ConcurrentMap<String, Compilation> compilationMap = new ConcurrentHashMap<>();
 
-    CRunStrategy(String compilerCommand, String wrapperCommand) {
+    CRunStrategy(String compilerCommand, String wrapperCommand, String envScript) {
         this.compilerCommand = compilerCommand;
         this.wrapperCommand = wrapperCommand;
+        this.envScript = envScript;
+    }
+
+    @Override
+    public void beforeAll() {
+        if (envScript != null && !envScript.isEmpty()) {
+            capturedEnvironment = captureEnvironmentFromScript(envScript);
+        }
     }
 
     @Override
@@ -56,7 +71,12 @@ class CRunStrategy implements TestRunStrategy {
                 try {
                     List<String> runCommand = new ArrayList<>();
                     if (wrapperCommand != null && !wrapperCommand.isEmpty()) {
-                        runCommand.addAll(List.of(wrapperCommand.split(" ")));
+                        var wrapperParts = new ArrayList<>(List.of(wrapperCommand.split(" ")));
+                        var wrapperExecutable = new File(wrapperParts.get(0));
+                        if (wrapperExecutable.exists()) {
+                            wrapperParts.set(0, wrapperExecutable.getAbsolutePath());
+                        }
+                        runCommand.addAll(wrapperParts);
                     }
                     runCommand.add(outputFile.getPath());
                     if (run.getArgument() != null) {
@@ -76,14 +96,8 @@ class CRunStrategy implements TestRunStrategy {
                     stdoutThread.join();
                     stderrThread.join();
 
-                    if (stdoutBytes.size() > 0) {
-                        System.out.write(stdoutBytes.toByteArray());
-                        System.out.flush();
-                    }
-                    if (stderrBytes.size() > 0) {
-                        System.err.write(stderrBytes.toByteArray());
-                        System.err.flush();
-                    }
+                    printCaptured(System.out, stdoutBytes);
+                    printCaptured(System.err, stderrBytes);
 
                     if (exitCode != 0) {
                         Throwable parsed = parseExceptionFile(exceptionFile);
@@ -319,24 +333,104 @@ class CRunStrategy implements TestRunStrategy {
 
     private boolean doCompile(File inputDir) throws IOException, InterruptedException {
         String command = new File(compilerCommand).getAbsolutePath();
-        var process = new ProcessBuilder(command)
-                .directory(inputDir)
-                .start();
+        var pb = new ProcessBuilder(command).directory(inputDir);
+        if (capturedEnvironment != null) {
+            pb.environment().putAll(capturedEnvironment);
+        }
+        var process = pb.start();
         var stdoutBytes = new ByteArrayOutputStream();
         var stderrBytes = new ByteArrayOutputStream();
         var stdoutThread = captureStream(process.getInputStream(), stdoutBytes);
         var stderrThread = captureStream(process.getErrorStream(), stderrBytes);
         stdoutThread.join();
         stderrThread.join();
-        if (stdoutBytes.size() > 0) {
-            System.out.write(stdoutBytes.toByteArray());
-            System.out.flush();
-        }
-        if (stderrBytes.size() > 0) {
-            System.err.write(stderrBytes.toByteArray());
-            System.err.flush();
-        }
+        printCaptured(System.out, stdoutBytes);
+        printCaptured(System.err, stderrBytes);
         return process.waitFor() == 0;
+    }
+
+    private static void printCaptured(java.io.PrintStream target, ByteArrayOutputStream bytes) {
+        if (bytes.size() == 0) {
+            return;
+        }
+        target.print(new String(bytes.toByteArray(), nativeConsoleCharset()));
+        target.flush();
+    }
+
+    private static volatile Charset nativeConsoleCharset;
+
+    private static Charset nativeConsoleCharset() {
+        Charset result = nativeConsoleCharset;
+        if (result == null) {
+            result = detectNativeConsoleCharset();
+            nativeConsoleCharset = result;
+        }
+        return result;
+    }
+
+    private static Charset detectNativeConsoleCharset() {
+        if (!System.getProperty("os.name").toLowerCase().contains("win")) {
+            return Charset.defaultCharset();
+        }
+        try {
+            var process = new ProcessBuilder("cmd", "/c", "chcp").start();
+            var output = new ByteArrayOutputStream();
+            process.getInputStream().transferTo(output);
+            process.waitFor();
+            Matcher matcher = Pattern.compile("(\\d+)\\s*$").matcher(output.toString().trim());
+            if (matcher.find()) {
+                return Charset.forName("Cp" + matcher.group(1));
+            }
+        } catch (IOException | InterruptedException | RuntimeException e) {
+            // fall back to default charset below
+        }
+        return Charset.defaultCharset();
+    }
+
+    // Runs a user-configured script (teavm.junit.c.envScript) that may set up extra environment
+    // variables (e.g. an MSVC dev environment) and captures the resulting environment, so it can be
+    // merged into subsequent compiler invocations instead of setting it up again for every one of them.
+    private static Map<String, String> captureEnvironmentFromScript(String envScript) {
+        var scriptFile = new File(envScript);
+        String path = scriptFile.exists() ? scriptFile.getAbsolutePath() : envScript;
+        String output;
+        if (System.getProperty("os.name").toLowerCase().contains("win")) {
+            output = runAndCaptureOutput("cmd", "/c", "call \"" + path + "\" && set");
+        } else {
+            output = runAndCaptureOutput("bash", "-c", "source \"" + path + "\" && env");
+        }
+        return parseEnvironment(output);
+    }
+
+    private static Map<String, String> parseEnvironment(String output) {
+        var result = new HashMap<String, String>();
+        for (var line : output.split("\\r?\\n")) {
+            int eq = line.indexOf('=');
+            if (eq > 0) {
+                result.put(line.substring(0, eq), line.substring(eq + 1));
+            }
+        }
+        return result;
+    }
+
+    private static String runAndCaptureOutput(String... command) {
+        try {
+            var process = new ProcessBuilder(command).start();
+            var stdoutBytes = new ByteArrayOutputStream();
+            var stderrBytes = new ByteArrayOutputStream();
+            var stdoutThread = captureStream(process.getInputStream(), stdoutBytes);
+            var stderrThread = captureStream(process.getErrorStream(), stderrBytes);
+            stdoutThread.join();
+            stderrThread.join();
+            int exitCode = process.waitFor();
+            if (exitCode != 0) {
+                throw new RuntimeException("Command '" + String.join(" ", command) + "' failed with exit code "
+                        + exitCode + ": " + stderrBytes);
+            }
+            return stdoutBytes.toString();
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException("Failed to run command '" + String.join(" ", command) + "'", e);
+        }
     }
 
     @Override

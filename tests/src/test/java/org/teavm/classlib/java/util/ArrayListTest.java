@@ -15,14 +15,18 @@
  */
 package org.teavm.classlib.java.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
@@ -30,12 +34,243 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.teavm.junit.TeaVMTestRunner;
+import org.junit.jupiter.api.Test;
+import org.teavm.junit.TeaVMTest;
 
-@RunWith(TeaVMTestRunner.class)
+@TeaVMTest
 public class ArrayListTest {
+    @Test
+    public void searchesLogicalElementsAndNulls() {
+        ArrayList<String> list = new ArrayList<>(32);
+        assertFalse(list.contains(null));
+        assertEquals(-1, list.indexOf(null));
+        assertEquals(-1, list.lastIndexOf(null));
+        list.addAll(Arrays.asList("a", null, "b", "a", null));
+        assertTrue(list.contains("a"));
+        assertTrue(list.contains(null));
+        assertFalse(list.contains("missing"));
+        assertEquals(0, list.indexOf("a"));
+        assertEquals(3, list.lastIndexOf("a"));
+        assertEquals(1, list.indexOf(null));
+        assertEquals(4, list.lastIndexOf(null));
+        list.remove(4);
+        assertEquals(1, list.lastIndexOf(null));
+        list.clear();
+        assertFalse(list.contains(null));
+        assertEquals(-1, list.lastIndexOf("a"));
+    }
+
+    @Test
+    public void searchesInvokeQueryEqualityInEncounterOrder() {
+        ArrayList<Object> list = new ArrayList<>(Arrays.asList("a", null, "b", "a"));
+        List<Object> visited = new ArrayList<>();
+        Object query = new Object() {
+            @Override
+            public boolean equals(Object other) {
+                visited.add(other);
+                return "a".equals(other);
+            }
+        };
+        assertTrue(list.contains(query));
+        assertEquals(Arrays.asList("a"), visited);
+        visited.clear();
+        assertEquals(0, list.indexOf(query));
+        assertEquals(Arrays.asList("a"), visited);
+        visited.clear();
+        assertEquals(3, list.lastIndexOf(query));
+        assertEquals(Arrays.asList("a"), visited);
+        list.set(3, "c");
+        visited.clear();
+        assertEquals(3, Collections.unmodifiableList(list).lastIndexOf(new Object() {
+            @Override
+            public boolean equals(Object other) {
+                visited.add(other);
+                return "c".equals(other);
+            }
+        }));
+        assertEquals(Arrays.asList("c"), visited);
+    }
+
+    @Test
+    public void missingSearchVisitsNullsInBothDirections() {
+        List<Object> visited = new ArrayList<>();
+        Object query = new Object() {
+            @Override
+            public boolean equals(Object other) {
+                visited.add(other);
+                return false;
+            }
+        };
+        List<Object> list = new ArrayList<>(Arrays.asList("a", null, "b"));
+        assertEquals(-1, list.indexOf(query));
+        assertEquals(Arrays.asList("a", null, "b"), visited);
+        visited.clear();
+        assertEquals(-1, list.lastIndexOf(query));
+        assertEquals(Arrays.asList("b", null, "a"), visited);
+    }
+
+    @Test
+    public void searchDoesNotSkipEqualityForIdenticalReferences() {
+        int[] calls = { 0 };
+        Object value = new Object() {
+            @Override
+            public boolean equals(Object other) {
+                calls[0]++;
+                return this == other;
+            }
+        };
+        ArrayList<Object> list = new ArrayList<>(Arrays.asList(value));
+        assertTrue(list.contains(value));
+        assertEquals(0, list.indexOf(value));
+        assertEquals(0, list.lastIndexOf(value));
+        assertEquals(3, calls[0]);
+    }
+
+    @Test
+    public void containsHonorsOverriddenIndexOf() {
+        ArrayList<Object> list = new ArrayList<>() {
+            @Override
+            public int indexOf(Object value) {
+                return "virtual".equals(value) ? 0 : -1;
+            }
+        };
+        assertTrue(list.contains("virtual"));
+        assertFalse(list.contains("missing"));
+        assertTrue(Collections.unmodifiableList(list).contains("virtual"));
+    }
+
+    @Test
+    public void searchPropagatesQueryExceptionWithoutChangingList() {
+        RuntimeException expected = new RuntimeException("query");
+        Object query = new Object() {
+            @Override
+            public boolean equals(Object other) {
+                throw expected;
+            }
+        };
+        ArrayList<Object> list = new ArrayList<>(Arrays.asList("a", "b"));
+        try {
+            list.contains(query);
+            fail("Expected query exception");
+        } catch (RuntimeException e) {
+            assertSame(expected, e);
+        }
+        assertEquals(Arrays.asList("a", "b"), list);
+    }
+
+    @Test
+    public void removalUsesQueryEqualityAndRemovesFirstMatch() {
+        ArrayList<Object> list = new ArrayList<>(Arrays.asList("a", null, "a"));
+        Object query = new Object() {
+            @Override
+            public boolean equals(Object other) {
+                return "a".equals(other);
+            }
+        };
+        assertTrue(list.remove(query));
+        assertEquals(Arrays.asList(null, "a"), list);
+        assertTrue(list.remove(null));
+        assertEquals(Arrays.asList("a"), list);
+    }
+
+    @Test
+    public void copyConstructorPreservesNullsAndOwnsStorage() {
+        ArrayList<Object> source = new ArrayList<>(32);
+        source.add("first");
+        source.add(null);
+        ArrayList<Object> copy = new ArrayList<>(source);
+        assertArrayEquals(new Object[] { "first", null }, copy.toArray());
+        source.set(0, "source");
+        copy.set(1, 42);
+        copy.add("added");
+        assertArrayEquals(new Object[] { "source", null }, source.toArray());
+        assertArrayEquals(new Object[] { "first", 42, "added" }, copy.toArray());
+    }
+
+    @Test
+    public void copyConstructorHonorsSubclassCollectionView() {
+        ArrayList<String> source = new ArrayList<String>() {
+            @Override
+            public Object[] toArray() {
+                return new Object[] { "iterated" };
+            }
+
+            @Override
+            public Iterator<String> iterator() {
+                return Arrays.asList("iterated").iterator();
+            }
+        };
+        source.add("stored");
+        assertEquals("iterated", new ArrayList<>(source).get(0));
+    }
+
+    @Test
+    public void emptyCopyAndCloneOwnTheirStorage() {
+        ArrayList<String> source = new ArrayList<>(32);
+        ArrayList<String> copy = new ArrayList<>(source);
+        ArrayList<?> clone = (ArrayList<?>) source.clone();
+        source.add("source");
+        copy.add("copy");
+        assertTrue(clone.isEmpty());
+        assertEquals("source", source.get(0));
+        assertEquals("copy", copy.get(0));
+    }
+
+    @Test
+    public void toArrayCopiesLogicalElements() {
+        ArrayList<String> list = new ArrayList<>(32);
+        list.add("first");
+        list.add(null);
+        Object[] copy = list.toArray();
+        assertEquals(Object[].class, copy.getClass());
+        assertArrayEquals(new Object[] { "first", null }, copy);
+        copy[0] = "copy";
+        assertEquals("first", list.get(0));
+        list.set(0, "list");
+        assertEquals("copy", copy[0]);
+    }
+
+    @Test
+    public void toArrayPreservesUnusedTail() {
+        ArrayList<String> list = new ArrayList<>(Arrays.asList("first", "second"));
+        String[] target = { "old", "old", "terminate", "retain" };
+        assertSame(target, list.toArray(target));
+        assertArrayEquals(new String[] { "first", "second", null, "retain" }, target);
+        list.clear();
+        target[1] = "retain";
+        assertSame(target, list.toArray(target));
+        assertArrayEquals(new String[] { null, "retain", null, "retain" }, target);
+    }
+
+    @Test
+    public void toArrayAllocatesRequestedComponentType() {
+        ArrayList<String> list = new ArrayList<>(Arrays.asList("first", null));
+        String[] target = new String[0];
+        String[] copy = list.toArray(target);
+        assertNotSame(target, copy);
+        assertEquals(String[].class, copy.getClass());
+        assertArrayEquals(new String[] { "first", null }, copy);
+    }
+
+    @Test
+    public void toArrayChecksStoresBeforeOverwritingLaterElements() {
+        ArrayList<Object> list = new ArrayList<>(Arrays.asList("first", 42, "last"));
+        String[] target = { "old0", "old1", "old2" };
+        try {
+            list.toArray(target);
+            fail("Expected ArrayStoreException");
+        } catch (ArrayStoreException e) {
+            assertArrayEquals(new String[] { "first", "old1", "old2" }, target);
+        }
+    }
+
+    @Test
+    public void toArrayRejectsNullTarget() {
+        assertThrows(NullPointerException.class, () -> {
+            new ArrayList<String>().toArray((String[]) null);
+        });
+    }
+
     @Test
     public void elementsAdded() {
         List<Integer> list = new ArrayList<>();
@@ -75,17 +310,19 @@ public class ArrayListTest {
         assertEquals(Integer.valueOf(9), list.get(8));
     }
 
-    @Test(expected = ConcurrentModificationException.class)
+    @Test
     public void concurrentModificationsRestricted() {
-        List<Integer> list = new ArrayList<>();
-        for (int i = 0; i < 10; ++i) {
-            list.add(i);
-        }
-        for (Integer item : list) {
-            if (item.equals(5)) {
-                list.remove(5);
+        assertThrows(ConcurrentModificationException.class, () -> {
+            List<Integer> list = new ArrayList<>();
+            for (int i = 0; i < 10; ++i) {
+                list.add(i);
             }
-        }
+            for (Integer item : list) {
+                if (item.equals(5)) {
+                    list.remove(5);
+                }
+            }
+        });
     }
 
     @Test

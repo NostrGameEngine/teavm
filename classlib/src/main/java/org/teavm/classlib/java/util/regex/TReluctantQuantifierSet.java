@@ -60,9 +60,19 @@ class TReluctantQuantifierSet extends TLeafQuantifierSet {
             if (stringIndex + leaf.charCount() <= matchResult.getRightBound()) {
                 shift = leaf.accepts(stringIndex, testString);
                 stringIndex += shift;
+            } else {
+                matchResult.hitEnd = true;
             }
         } while (shift >= 1);
 
         return -1;
+    }
+
+    @Override
+    void describe(TPatternWriter writer) {
+        if (leaf != innerSet) {
+            throw TPatternWriter.unsupported();
+        }
+        writer.create(this, TReluctantQuantifierSet.class, "reluctantQuantifierSet", leaf, type);
     }
 }

@@ -15,8 +15,8 @@
  */
 package org.teavm.jso.test;
 
-import static org.junit.Assert.assertEquals;
-import org.junit.runner.RunWith;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
 import org.teavm.jso.JSClass;
 import org.teavm.jso.JSMethod;
 import org.teavm.jso.JSObject;
@@ -25,11 +25,10 @@ import org.teavm.junit.AttachJavaScript;
 import org.teavm.junit.EachTestCompiledSeparately;
 import org.teavm.junit.OnlyPlatform;
 import org.teavm.junit.SkipJVM;
-import org.teavm.junit.TeaVMTestRunner;
+import org.teavm.junit.TeaVMTest;
 import org.teavm.junit.TestPlatform;
-import org.testng.annotations.Test;
 
-@RunWith(TeaVMTestRunner.class)
+@TeaVMTest
 @SkipJVM
 @OnlyPlatform({TestPlatform.JAVASCRIPT, TestPlatform.WEBASSEMBLY_GC})
 @EachTestCompiledSeparately
@@ -100,6 +99,15 @@ public class CallTest {
         assertEquals("tva", TestClass.topLevelVarargInt());
     }
 
+    @Test
+    @AttachJavaScript("org/teavm/jso/test/vararg.js")
+    public void lexicalGlobalVarargPreservesNullableStrings() {
+        String[] values = { null, "\u0080", "\ud800" };
+        assertEquals("lex:null:\u0080:\ud800", TestClass.lexicalVararg(values));
+        assertEquals("lex:", TestClass.lexicalVararg());
+        assertEquals("tva:head:null:\u0080:\ud800", TestClass.topLevelPrefixedVararg("head", values));
+    }
+
     @JSClass
     public static class TestClass implements JSObject {
         public static native String allVararg(String... args);
@@ -117,5 +125,12 @@ public class CallTest {
         @JSTopLevel
         @JSMethod("topLevelVararg")
         public static native String topLevelVarargInt(int... args);
+
+        @JSTopLevel
+        public static native String lexicalVararg(String... args);
+
+        @JSTopLevel
+        @JSMethod("topLevelVararg")
+        public static native String topLevelPrefixedVararg(String prefix, String... args);
     }
 }

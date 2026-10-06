@@ -95,30 +95,25 @@ public final class TSystem extends TObject {
         if (src == null || dest == null) {
             throw new TNullPointerException("Either src or dest is null");
         }
-        if (srcPos < 0 || destPos < 0 || length < 0 || srcPos + length > TArray.getLength(src)
-                || destPos + length > TArray.getLength(dest)) {
+        Class<?> srcType = src.getClass().getComponentType();
+        Class<?> targetType = dest.getClass().getComponentType();
+        if (srcType == null || targetType == null
+                || (srcType != targetType && (srcType.isPrimitive() || targetType.isPrimitive()))) {
+            throw new TArrayStoreException();
+        }
+        int srcLength = PlatformDetector.isJavaScript() ? fastArrayLength(src) : TArray.getLength(src);
+        int destLength = PlatformDetector.isJavaScript() ? fastArrayLength(dest) : TArray.getLength(dest);
+        if (srcPos < 0 || destPos < 0 || length < 0 || srcPos > srcLength - length
+                || destPos > destLength - length) {
             throw new TIndexOutOfBoundsException();
         }
-        if (src != dest) {
-            Class<?> srcType = src.getClass().getComponentType();
-            Class<?> targetType = dest.getClass().getComponentType();
-            if (srcType == null || targetType == null) {
-                throw new TArrayStoreException();
-            }
-            if (srcType != targetType) {
-                if (!srcType.isPrimitive() && !targetType.isPrimitive()) {
-                    Object[] srcArray = (Object[]) (Object) src;
-                    int pos = srcPos;
-                    for (int i = 0; i < length; ++i) {
-                        Object elem = srcArray[pos++];
-                        if (!targetType.isInstance(elem)) {
-                            doArrayCopy(src, srcPos, dest, destPos, i);
-                            throw new TArrayStoreException();
-                        }
-                    }
-                    doArrayCopy(src, srcPos, dest, destPos, length);
-                    return;
-                } else if (!srcType.isPrimitive() || !targetType.isPrimitive()) {
+        if (srcType != targetType && !targetType.isAssignableFrom(srcType)) {
+            Object[] srcArray = (Object[]) (Object) src;
+            int pos = srcPos;
+            for (int i = 0; i < length; ++i) {
+                Object elem = srcArray[pos++];
+                if (elem != null && !targetType.isInstance(elem)) {
+                    doArrayCopy(src, srcPos, dest, destPos, i);
                     throw new TArrayStoreException();
                 }
             }
@@ -127,8 +122,8 @@ public final class TSystem extends TObject {
     }
 
     static void fastArraycopy(Object src, int srcPos, Object dest, int destPos, int length) {
-        if (srcPos < 0 || destPos < 0 || length < 0 || srcPos + length > fastArrayLength(src)
-                || destPos + length > fastArrayLength(dest)) {
+        if (srcPos < 0 || destPos < 0 || length < 0 || srcPos > fastArrayLength(src) - length
+                || destPos > fastArrayLength(dest) - length) {
             throw new TIndexOutOfBoundsException();
         }
         doArrayCopy(src, srcPos, dest, destPos, length);

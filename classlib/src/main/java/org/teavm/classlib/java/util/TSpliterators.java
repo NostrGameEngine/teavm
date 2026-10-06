@@ -34,6 +34,7 @@ public class TSpliterators {
 
             @Override
             public boolean tryAdvance(Consumer<? super T> action) {
+                TObjects.requireNonNull(action);
                 if (index >= array.length) {
                     return false;
                 }
@@ -81,6 +82,7 @@ public class TSpliterators {
 
             @Override
             public boolean tryAdvance(IntConsumer action) {
+                TObjects.requireNonNull(action);
                 if (index < toIndex) {
                     action.accept(array[index++]);
                     return true;
@@ -105,6 +107,7 @@ public class TSpliterators {
         return new TSpliterator<T>() {
             @Override
             public boolean tryAdvance(Consumer<? super T> action) {
+                TObjects.requireNonNull(action);
                 if (iterator.hasNext()) {
                     action.accept(iterator.next());
                     return true;
@@ -134,6 +137,7 @@ public class TSpliterators {
         return new TSpliterator<T>() {
             @Override
             public boolean tryAdvance(Consumer<? super T> action) {
+                TObjects.requireNonNull(action);
                 if (iterator.hasNext()) {
                     action.accept(iterator.next());
                     return true;
@@ -163,6 +167,7 @@ public class TSpliterators {
         return new TSpliterator.OfInt() {
             @Override
             public boolean tryAdvance(IntConsumer action) {
+                TObjects.requireNonNull(action);
                 if (iterator.hasNext()) {
                     action.accept(iterator.next());
                     return true;
@@ -192,6 +197,7 @@ public class TSpliterators {
         return new TSpliterator.OfInt() {
             @Override
             public boolean tryAdvance(IntConsumer action) {
+                TObjects.requireNonNull(action);
                 if (iterator.hasNext()) {
                     action.accept(iterator.next());
                     return true;
@@ -221,6 +227,7 @@ public class TSpliterators {
         return new TSpliterator.OfLong() {
             @Override
             public boolean tryAdvance(LongConsumer action) {
+                TObjects.requireNonNull(action);
                 if (iterator.hasNext()) {
                     action.accept(iterator.next());
                     return true;
@@ -250,6 +257,7 @@ public class TSpliterators {
         return new TSpliterator.OfLong() {
             @Override
             public boolean tryAdvance(LongConsumer action) {
+                TObjects.requireNonNull(action);
                 if (iterator.hasNext()) {
                     action.accept(iterator.next());
                     return true;
@@ -280,6 +288,7 @@ public class TSpliterators {
         return new TSpliterator.OfDouble() {
             @Override
             public boolean tryAdvance(DoubleConsumer action) {
+                TObjects.requireNonNull(action);
                 if (iterator.hasNext()) {
                     action.accept(iterator.next());
                     return true;
@@ -310,6 +319,7 @@ public class TSpliterators {
         return new TSpliterator.OfDouble() {
             @Override
             public boolean tryAdvance(DoubleConsumer action) {
+                TObjects.requireNonNull(action);
                 if (iterator.hasNext()) {
                     action.accept(iterator.next());
                     return true;

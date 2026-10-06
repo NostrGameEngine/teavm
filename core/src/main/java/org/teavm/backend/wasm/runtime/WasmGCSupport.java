@@ -36,6 +36,10 @@ public class WasmGCSupport {
         return new ClassCastException();
     }
 
+    public static void throwNegativeArraySizeException() {
+        throw new NegativeArraySizeException();
+    }
+
     public static void throwCloneNotSupportedException() throws CloneNotSupportedException {
         throw new CloneNotSupportedException();
     }
@@ -63,26 +67,40 @@ public class WasmGCSupport {
         var length = nextLEB();
         var result = new char[length];
         var pos = 0;
+        var pending = -1;
         while (pos < length) {
-            var b = nextByte();
-            if ((b & 0x80) == 0) {
-                result[pos++] = (char) b;
-            } else if ((b & 0xE0) == 0xC0) {
-                var b2 = nextByte();
-                result[pos++] = (char) (((b & 0x1F) << 6) | (b2 & 0x3F));
-            } else if ((b & 0xF0) == 0xE0) {
-                var b2 = nextByte();
-                var b3 = nextByte();
-                var c = (char) (((b & 0x0F) << 12) | ((b2 & 0x3f) << 6) | (b3 & 0x3F));
-                result[pos++] = c;
-            } else if ((b & 0xF8) == 0xF0) {
-                var b2 = nextByte();
-                var b3 = nextByte();
-                var b4 = nextByte();
-                var code = ((b & 0x07) << 18) | ((b2 & 0x3f) << 12) | ((b3 & 0x3F) << 6) | (b4 & 0x3F);
-                result[pos++] = Character.highSurrogate(code);
-                result[pos++] = Character.lowSurrogate(code);
+            int c;
+            if (pending >= 0) {
+                c = pending;
+                pending = -1;
+            } else {
+                var b = nextByte();
+                if ((b & 0x80) == 0) {
+                    c = b;
+                } else if ((b & 0xE0) == 0xC0) {
+                    var b2 = nextByte();
+                    c = ((b & 0x1F) << 6) | (b2 & 0x3F);
+                } else if ((b & 0xF0) == 0xE0) {
+                    var b2 = nextByte();
+                    var b3 = nextByte();
+                    c = ((b & 0x0F) << 12) | ((b2 & 0x3f) << 6) | (b3 & 0x3F);
+                } else if ((b & 0xF8) == 0xF0) {
+                    var b2 = nextByte();
+                    var b3 = nextByte();
+                    var b4 = nextByte();
+                    var code = ((b & 0x07) << 18) | ((b2 & 0x3f) << 12) | ((b3 & 0x3F) << 6) | (b4 & 0x3F);
+                    c = Character.highSurrogate(code);
+                    pending = Character.lowSurrogate(code);
+                } else {
+                    continue;
+                }
             }
+            // A single array store avoids cyclic nullable-reference phis in optimizing Wasm engines.
+            result[pos++] = (char) c;
+        }
+        if (pending >= 0) {
+            // Retain the bounds failure for a supplementary code point with a truncated declared length.
+            result[pos] = (char) pending;
         }
         return result;
     }

@@ -48,6 +48,7 @@ import org.teavm.jso.JSBufferType;
 import org.teavm.jso.JSByRef;
 import org.teavm.jso.JSClass;
 import org.teavm.jso.JSFunctor;
+import org.teavm.jso.JSModule;
 import org.teavm.jso.JSPrimitiveType;
 import org.teavm.jso.JSProperty;
 import org.teavm.jso.JSTopLevel;
@@ -1209,9 +1210,24 @@ class JSClassProcessor {
         newInvoke.setReceiver(result);
 
         List<Variable> newArguments = new ArrayList<>();
-        newArguments.add(getCallTarget(invoke));
-        newArguments.add(marshaller.addStringWrap(marshaller.addString(name, invoke.getLocation()),
-                invoke.getLocation()));
+        var targetClass = classSource.get(invoke.getMethod().getClassName());
+        var targetMethod = targetClass != null ? targetClass.getMethod(invoke.getMethod().getDescriptor()) : null;
+        var classAnnotations = targetClass != null ? targetClass.getAnnotations() : null;
+        var methodAnnotations = targetMethod != null ? targetMethod.getAnnotations() : null;
+        var globalVararg = vararg && !wasmGC && invoke.getInstance() == null
+                && ((classAnnotations != null && classAnnotations.get(JSTopLevel.class.getName()) != null)
+                        || (methodAnnotations != null && methodAnnotations.get(JSTopLevel.class.getName()) != null))
+                && (classAnnotations == null || classAnnotations.get(JSModule.class.getName()) == null)
+                && (methodAnnotations == null || methodAnnotations.get(JSModule.class.getName()) == null);
+        if (globalVararg) {
+            // Preserve the global binding before argument marshalling introduces inlined loops.
+            newInvoke.setMethod(JSMethods.APPLY_FUNCTION);
+            newArguments.add(marshaller.globalRef(name, invoke.getLocation()));
+        } else {
+            newArguments.add(getCallTarget(invoke));
+            newArguments.add(marshaller.addStringWrap(marshaller.addString(name, invoke.getLocation()),
+                    invoke.getLocation()));
+        }
         newInvoke.setLocation(invoke.getLocation());
 
         var callArguments = new ArrayList<Variable>();

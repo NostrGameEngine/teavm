@@ -177,6 +177,8 @@ let $rt_newClassMetadata = source => {
         reflection: null,
         classObject: null,
         assignableCache: null,
+        interfaceId: -1,
+        interfaceMask: null,
         valueToObject: o => o,
         objectToValue: o => o
     }, source || {});

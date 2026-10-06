@@ -100,6 +100,9 @@ public class JSNativeInjector implements Injector, DependencyPlugin {
             case "apply":
                 applyFunction(context);
                 break;
+            case "applyFunction":
+                applyGlobalFunction(context);
+                break;
             case "arrayOf":
                 writer.append('[');
                 for (int i = 0; i < context.argumentCount(); ++i) {
@@ -290,6 +293,27 @@ public class JSNativeInjector implements Injector, DependencyPlugin {
         writer.append(",").ws();
         context.writeExpr(context.getArgument(2), Precedence.ASSIGNMENT);
         writer.append(")");
+    }
+
+    private void applyGlobalFunction(InjectorContext context) {
+        var writer = context.getWriter();
+        var arguments = new ArrayList<Expr>();
+        if (extractConstantArgList(context.getArgument(1), arguments) && arguments.size() < 13) {
+            context.writeExpr(context.getArgument(0), Precedence.FUNCTION_CALL);
+            writer.append('(');
+            for (int i = 0; i < arguments.size(); ++i) {
+                if (i > 0) {
+                    writer.append(',').ws();
+                }
+                context.writeExpr(arguments.get(i), Precedence.min());
+            }
+        } else {
+            writer.appendFunction("$rt_apply_topLevel").append('(');
+            context.writeExpr(context.getArgument(0), Precedence.ASSIGNMENT);
+            writer.append(',').ws();
+            context.writeExpr(context.getArgument(1), Precedence.ASSIGNMENT);
+        }
+        writer.append(')');
     }
 
     private boolean tryApplyFunctionOptimized(InjectorContext context) {

@@ -15,9 +15,9 @@
  */
 package org.teavm.classlib.java.lang.reflect;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
@@ -33,15 +33,14 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.teavm.classlib.support.Reflectable;
 import org.teavm.junit.EachTestCompiledSeparately;
 import org.teavm.junit.SkipPlatform;
-import org.teavm.junit.TeaVMTestRunner;
+import org.teavm.junit.TeaVMTest;
 import org.teavm.junit.TestPlatform;
 
-@RunWith(TeaVMTestRunner.class)
+@TeaVMTest
 @EachTestCompiledSeparately
 public class MethodTest {
     @Test
@@ -114,11 +113,20 @@ public class MethodTest {
     }
 
     @Test
+    public void voidMethodInvocationReturnsNull() throws NoSuchMethodException, InvocationTargetException,
+            IllegalAccessException {
+        Foo foo = new Foo();
+        Method method = foo.getClass().getMethod("bar", Object.class);
+        assertNull(method.invoke(foo, "23"));
+    }
+
+    @Test
     public void methodInvoked2() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
         Foo foo = new Foo();
         foo.bar("42");
         Method method = foo.getClass().getDeclaredMethod("baz");
         assertEquals("42", method.invoke(foo));
+        assertEquals("42", method.invoke(foo, (Object[]) null));
     }
 
     @Test
@@ -279,6 +287,14 @@ public class MethodTest {
         method = ClassWithAsyncMethod.class.getMethod("bar", int.class);
         result = method.invoke(instance, 23);
         assertEquals(25, result);
+    }
+
+    @Test
+    @SkipPlatform(TestPlatform.C)
+    public void asyncReflectionWithSeveralParameters() throws Exception {
+        var method = ClassWithAsyncMethodWithSeveralParameters.class.getMethod("foo", int.class, int.class);
+        var result = method.invoke(null, 23, 42);
+        assertEquals(67, result);
     }
 
     private void callMethods() {
@@ -529,6 +545,17 @@ public class MethodTest {
             Thread.sleep(1);
             ++x;
             return x;
+        }
+    }
+
+    static class ClassWithAsyncMethodWithSeveralParameters {
+        @Reflectable
+        public static int foo(int x, int y) throws InterruptedException {
+            Thread.sleep(1);
+            ++x;
+            Thread.sleep(1);
+            ++y;
+            return x + y;
         }
     }
 }

@@ -160,7 +160,8 @@ public class WasmGCClassGenerator implements WasmGCClassInfoProvider, WasmGCInit
                 dependencyInfo);
         supertypeGenerator = new WasmGCSupertypeFunctionGenerator(module, this, names, tagRegistry, functionTypes,
                 queue);
-        newArrayGenerator = new WasmGCNewArrayFunctionGenerator(module, functionTypes, this, names, queue);
+        newArrayGenerator = new WasmGCNewArrayFunctionGenerator(module, functionTypes, functionProvider,
+                this, names, queue);
         reflectionTypes = new ReflectionTypes(names, module, dependencyInfo, classSource, functionTypes, this,
                 functionProvider, metadataRequirements);
         typeMapper = new WasmGCTypeMapper(classSource, this, functionTypes, reflectionTypes);

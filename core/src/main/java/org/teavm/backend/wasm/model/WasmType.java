@@ -118,12 +118,12 @@ public abstract class WasmType {
 
         @Override
         public Reference asNonNull() {
-            return kind.nonNullType;
+            return kind.asNonNullType();
         }
 
         @Override
         public Reference asNullable() {
-            return kind.type;
+            return kind.asType();
         }
     }
 

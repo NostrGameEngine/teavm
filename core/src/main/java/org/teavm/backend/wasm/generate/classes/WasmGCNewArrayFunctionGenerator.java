@@ -18,6 +18,7 @@ package org.teavm.backend.wasm.generate.classes;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
+import org.teavm.backend.wasm.BaseWasmFunctionRepository;
 import org.teavm.backend.wasm.WasmFunctionTypes;
 import org.teavm.backend.wasm.generate.WasmGCNameProvider;
 import org.teavm.backend.wasm.model.WasmArray;
@@ -26,24 +27,30 @@ import org.teavm.backend.wasm.model.WasmFunctionType;
 import org.teavm.backend.wasm.model.WasmLocal;
 import org.teavm.backend.wasm.model.WasmModule;
 import org.teavm.backend.wasm.model.WasmType;
+import org.teavm.backend.wasm.model.instruction.WasmInstructionBuilder;
 import org.teavm.backend.wasm.model.instruction.WasmIntBinaryOperation;
 import org.teavm.backend.wasm.model.instruction.WasmIntType;
 import org.teavm.backend.wasm.model.instruction.WasmIntUnaryOperation;
+import org.teavm.backend.wasm.runtime.WasmGCSupport;
+import org.teavm.model.MethodReference;
 import org.teavm.model.ValueType;
 
 class WasmGCNewArrayFunctionGenerator {
     private WasmModule module;
     private WasmFunctionTypes functionTypes;
+    private BaseWasmFunctionRepository functions;
     private WasmGCClassInfoProvider classInfoProvider;
     private WasmGCNameProvider names;
     private Queue<Runnable> queue;
     private WasmFunction newObjectArrayFunction;
 
     WasmGCNewArrayFunctionGenerator(WasmModule module, WasmFunctionTypes functionTypes,
+            BaseWasmFunctionRepository functions,
             WasmGCClassInfoProvider classInfoProvider, WasmGCNameProvider names,
             Queue<Runnable> queue) {
         this.module = module;
         this.functionTypes = functionTypes;
+        this.functions = functions;
         this.classInfoProvider = classInfoProvider;
         this.names = names;
         this.queue = queue;
@@ -75,7 +82,10 @@ class WasmGCNewArrayFunctionGenerator {
                         .getUnpackedType();
                 var wasmArray = (WasmArray) wasmArrayType.composite;
 
-                function.getBody().builder()
+                var body = function.getBody().builder();
+                body.getLocal(sizeLocal);
+                checkNegativeArraySize(body);
+                body
                         .getGlobal(classInfo.getVirtualTablePointer())
                         .nullConst(WasmType.EQ)
                         .getLocal(sizeLocal)
@@ -122,7 +132,10 @@ class WasmGCNewArrayFunctionGenerator {
                     .getUnpackedType();
             var wasmArray = (WasmArray) wasmArrayType.composite;
 
-            function.getBody().builder()
+            var body = function.getBody().builder();
+            body.getLocal(sizeLocal);
+            checkNegativeArraySize(body);
+            body
                     .getLocal(clsLocal)
                     .call(classInfoProvider.getGetArrayClassFunction())
                     .structGet(classInfoType.structure(), classInfoType.vtableIndex())
@@ -174,6 +187,12 @@ class WasmGCNewArrayFunctionGenerator {
 
             var allocFunction = getNewObjectArrayFunction();
             var body = function.getBody().builder();
+            // Any negative dimension must fail before allocation, including after an empty dimension.
+            body.getLocal(dimensionLocals[0]);
+            for (var i = 1; i < depth; ++i) {
+                body.getLocal(dimensionLocals[i]).intBinary(WasmIntType.INT32, WasmIntBinaryOperation.OR);
+            }
+            checkNegativeArraySize(body);
             body
                     .getLocal(itemTypeLocal)
                     .getLocal(dimensionLocals[0])
@@ -228,5 +247,11 @@ class WasmGCNewArrayFunctionGenerator {
             body.getLocal(resultVar);
         });
         return function;
+    }
+
+    private void checkNegativeArraySize(WasmInstructionBuilder body) {
+        body.i32Const(0).intBinary(WasmIntType.INT32, WasmIntBinaryOperation.LT_SIGNED);
+        body.conditional().getThenBlock().builder().call(functions.forStaticMethod(
+                new MethodReference(WasmGCSupport.class, "throwNegativeArraySizeException", void.class)));
     }
 }

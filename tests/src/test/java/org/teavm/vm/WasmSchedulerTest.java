@@ -15,19 +15,18 @@
  */
 package org.teavm.vm;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.ArrayList;
 import java.util.List;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.teavm.junit.EachTestCompiledSeparately;
 import org.teavm.junit.OnlyPlatform;
 import org.teavm.junit.SkipJVM;
-import org.teavm.junit.TeaVMTestRunner;
+import org.teavm.junit.TeaVMTest;
 import org.teavm.junit.TestPlatform;
 
-@RunWith(TeaVMTestRunner.class)
+@TeaVMTest
 @EachTestCompiledSeparately
 @OnlyPlatform(TestPlatform.WEBASSEMBLY_GC)
 @SkipJVM
@@ -42,7 +41,7 @@ public class WasmSchedulerTest {
             // Simulate a bounded CPU chunk without introducing a suspension point.
         }
         Thread.yield();
-        assertTrue("A single yield after the budget must be sufficient", ran[0]);
+        assertTrue(ran[0], "A single yield after the budget must be sufficient");
         other.join();
     }
 

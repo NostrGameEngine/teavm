@@ -15,24 +15,100 @@
  */
 package org.teavm.classlib.java.lang;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.Properties;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.teavm.junit.EachTestCompiledSeparately;
 import org.teavm.junit.SkipJVM;
-import org.teavm.junit.TeaVMTestRunner;
+import org.teavm.junit.TeaVMTest;
 
-@RunWith(TeaVMTestRunner.class)
+@TeaVMTest
 @EachTestCompiledSeparately
 public class SystemTest {
+    private Object[] covariantDestination;
+
+    @Test
+    public void rejectsNonArraySource() {
+        assertThrows(ArrayStoreException.class, () -> {
+            System.arraycopy(new Object(), 0, new Object[0], 0, 0);
+        });
+    }
+
+    @Test
+    public void rejectsNonArrayDestination() {
+        assertThrows(ArrayStoreException.class, () -> {
+            System.arraycopy(new Object[0], 0, new Object(), 0, 0);
+        });
+    }
+
+    @Test
+    public void rejectsIdenticalNonArrayArguments() {
+        assertThrows(ArrayStoreException.class, () -> {
+            Object value = new Object();
+            System.arraycopy(value, 0, value, 0, 0);
+        });
+    }
+
+    @Test
+    public void rejectsEmptyCopyBetweenPrimitiveAndReferenceArrays() {
+        assertThrows(ArrayStoreException.class, () -> {
+            System.arraycopy(new int[0], 0, new Object[0], 0, 0);
+        });
+    }
+
+    @Test
+    public void checksRuntimeComponentTypeForCovariantParameter() {
+        Object[] source = { "first", 42, "last" };
+        covariantDestination = new String[] { "old0", "old1", "old2" };
+        try {
+            copyReferences(source, covariantDestination);
+            fail("Expected ArrayStoreException");
+        } catch (ArrayStoreException e) {
+            assertArrayEquals(new String[] { "first", "old1", "old2" }, covariantDestination);
+        }
+    }
+
+    private static void copyReferences(Object[] source, Object[] destination) {
+        System.arraycopy(source, 0, destination, 0, source.length);
+    }
+
+    @Test
+    public void copiesNullsIntoNarrowerReferenceArray() {
+        Object[] source = { null, "value", null };
+        String[] destination = { "old", "old", "old" };
+        System.arraycopy(source, 0, destination, 0, source.length);
+        assertArrayEquals(new String[] { null, "value", null }, destination);
+    }
+
+    @Test
+    public void rejectsDifferentPrimitiveArrayTypes() {
+        assertThrows(ArrayStoreException.class, () -> {
+            System.arraycopy(new int[] { 1 }, 0, new float[1], 0, 1);
+        });
+    }
+
+    @Test
+    public void rejectsOverflowingCopyRange() {
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            System.arraycopy(new int[1], Integer.MAX_VALUE, new int[1], 0, 1);
+        });
+    }
+
+    @Test
+    public void rejectsOverflowingDestinationRange() {
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            System.arraycopy(new int[1], 0, new int[1], Integer.MAX_VALUE, 1);
+        });
+    }
+
     @Test
     public void copiesArray() {
         Object a = new Object();
@@ -123,31 +199,31 @@ public class SystemTest {
         }
     }
 
-    @Test(expected = ArrayStoreException.class)
+    @Test
     public void failsToCopyToUnrelatedReferenceArray() {
         String[] src = { "foo", "bar", "baz" };
         Integer[] dest = new Integer[3];
-        System.arraycopy(src, 0, dest, 0, 3);
+        assertThrows(ArrayStoreException.class, () -> System.arraycopy(src, 0, dest, 0, 3));
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test
     public void failsToCopyArraysWithInvalidIndexes() {
-        System.arraycopy(new Object[0], 0, new Object[0], 0, 1);
+        assertThrows(IndexOutOfBoundsException.class, () -> System.arraycopy(new Object[0], 0, new Object[0], 0, 1));
     }
 
-    @Test(expected = ArrayStoreException.class)
+    @Test
     public void failsToCopyArraysWithIncompatibleElements() {
-        System.arraycopy(new Object[1], 0, new int[1], 0, 1);
+        assertThrows(ArrayStoreException.class, () -> System.arraycopy(new Object[1], 0, new int[1], 0, 1));
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void failsToCopyFromNullSource() {
-        System.arraycopy(null, 0, new int[1], 0, 1);
+        assertThrows(NullPointerException.class, () -> System.arraycopy(null, 0, new int[1], 0, 1));
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void failsToCopyToNullTarget() {
-        System.arraycopy(new Object[1], 0, null, 0, 1);
+        assertThrows(NullPointerException.class, () -> System.arraycopy(new Object[1], 0, null, 0, 1));
     }
 
     @Test

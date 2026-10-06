@@ -20,6 +20,7 @@ import org.teavm.model.MethodReference;
 import org.teavm.model.Program;
 import org.teavm.model.ValueType;
 import org.teavm.model.analysis.BaseTypeInference;
+import org.teavm.model.instructions.ConstructArrayInstruction;
 import org.teavm.model.instructions.InvokeInstruction;
 
 public class SystemArrayCopyOptimization implements MethodOptimization {
@@ -32,6 +33,14 @@ public class SystemArrayCopyOptimization implements MethodOptimization {
     @Override
     public boolean optimize(MethodOptimizationContext context, Program program) {
         var typeInference = new TypeInference(program, context.getMethod().getReference());
+        var allocatedArrays = new boolean[program.variableCount()];
+        for (var block : program.getBasicBlocks()) {
+            for (var instruction : block) {
+                if (instruction instanceof ConstructArrayInstruction) {
+                    allocatedArrays[((ConstructArrayInstruction) instruction).getReceiver().getIndex()] = true;
+                }
+            }
+        }
         var somethingChanged = false;
         for (var block : program.getBasicBlocks()) {
             for (var instruction : block) {
@@ -42,8 +51,12 @@ public class SystemArrayCopyOptimization implements MethodOptimization {
                         var sourceType = typeInference.typeOf(invoke.getArguments().get(0));
                         var destType = typeInference.typeOf(invoke.getArguments().get(2));
                         if (sourceType instanceof ValueType.Array && destType instanceof ValueType.Array) {
-                            if (sourceType.equals(destType)
-                                    || context.getHierarchy().isSuperType(destType, sourceType, false)) {
+                            // A reference-array parameter may have a narrower runtime component type.
+                            var exactDestination = ((ValueType.Array) destType).getItemType()
+                                    instanceof ValueType.Primitive
+                                    || allocatedArrays[invoke.getArguments().get(2).getIndex()];
+                            if (exactDestination && (sourceType.equals(destType)
+                                    || context.getHierarchy().isSuperType(destType, sourceType, false))) {
                                 invoke.setMethod(FAST_ARRAY_COPY_METHOD);
                                 somethingChanged = true;
                             }

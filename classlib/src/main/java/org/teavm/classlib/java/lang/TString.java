@@ -52,6 +52,7 @@ public final class TString extends TObject implements TSerializable, TComparable
     private native void initWithEmptyChars();
 
     public TString(TString other) {
+        hashCode = other.hashCode;
         borrowChars(other);
     }
 
@@ -246,15 +247,17 @@ public final class TString extends TObject implements TSerializable, TComparable
         if (this == anotherString) {
             return 0;
         }
-        int l = TMath.min(length(), anotherString.length());
+        int length = charactersLength();
+        int otherLength = anotherString.charactersLength();
+        int l = TMath.min(length, otherLength);
         for (int i = 0; i < l; ++i) {
-            char a = charAt(i);
-            char b = anotherString.charAt(i);
+            char a = charactersGet(i);
+            char b = anotherString.charactersGet(i);
             if (a - b != 0) {
                 return a - b;
             }
         }
-        return length() - anotherString.length();
+        return length - otherLength;
     }
 
     public int compareToIgnoreCase(TString anotherString) {
@@ -263,8 +266,8 @@ public final class TString extends TObject implements TSerializable, TComparable
         }
         int l = TMath.min(length(), anotherString.length());
         for (int i = 0; i < l; ++i) {
-            char a = TCharacter.toLowerCase(charAt(i));
-            char b = TCharacter.toLowerCase(anotherString.charAt(i));
+            char a = TCharacter.toLowerCase(charactersGet(i));
+            char b = TCharacter.toLowerCase(anotherString.charactersGet(i));
             if (a - b != 0) {
                 return a - b;
             }
@@ -277,7 +280,7 @@ public final class TString extends TObject implements TSerializable, TComparable
             return false;
         }
         for (int i = 0; i < prefix.length(); ++i) {
-            if (prefix.charAt(i) != charAt(toffset++)) {
+            if (prefix.charactersGet(i) != charactersGet(toffset++)) {
                 return false;
             }
         }
@@ -291,13 +294,13 @@ public final class TString extends TObject implements TSerializable, TComparable
         return startsWith(prefix, 0);
     }
 
-    public boolean regionMatches(boolean ignoreCase, int toffset, String other, int ooffset, int len) {
+    public boolean regionMatches(boolean ignoreCase, int toffset, TString other, int ooffset, int len) {
         if (toffset < 0 || ooffset < 0 || toffset + len > length() || ooffset + len > other.length()) {
             return false;
         }
         for (int i = 0; i < len; ++i) {
-            char a = charAt(toffset++);
-            char b = other.charAt(ooffset++);
+            char a = charactersGet(toffset++);
+            char b = other.charactersGet(ooffset++);
             if (ignoreCase) {
                 a = TCharacter.toLowerCase(a);
                 b = TCharacter.toLowerCase(b);
@@ -314,7 +317,7 @@ public final class TString extends TObject implements TSerializable, TComparable
             return false;
         }
         for (int i = 0; i < len; ++i) {
-            if (charAt(toffset++) != other.charAt(ooffset++)) {
+            if (charactersGet(toffset++) != other.charactersGet(ooffset++)) {
                 return false;
             }
         }
@@ -330,7 +333,7 @@ public final class TString extends TObject implements TSerializable, TComparable
         }
         int j = 0;
         for (int i = length() - suffix.length(); i < length(); ++i) {
-            if (charAt(i) != suffix.charAt(j++)) {
+            if (charactersGet(i) != suffix.charactersGet(j++)) {
                 return false;
             }
         }
@@ -390,12 +393,20 @@ public final class TString extends TObject implements TSerializable, TComparable
     }
 
     public int indexOf(TString str, int fromIndex) {
+        int length = charactersLength();
+        int otherLength = str.charactersLength();
         fromIndex = Math.max(0, fromIndex);
-        int toIndex = length() - str.length();
+        if (otherLength == 0) {
+            return Math.min(fromIndex, length);
+        }
+        if (PlatformDetector.isJavaScript()) {
+            return indexOfJS(nativeString(), str.nativeString(), fromIndex);
+        }
+        int toIndex = length - otherLength;
         outer:
         for (int i = fromIndex; i <= toIndex; ++i) {
-            for (int j = 0; j < str.length(); ++j) {
-                if (charAt(i + j) != str.charAt(j)) {
+            for (int j = 0; j < otherLength; ++j) {
+                if (charactersGet(i + j) != str.charactersGet(j)) {
                     continue outer;
                 }
             }
@@ -403,17 +414,28 @@ public final class TString extends TObject implements TSerializable, TComparable
         }
         return -1;
     }
+
+    @NoSideEffects
+    private static native int indexOfJS(Object value, Object search, int fromIndex);
 
     public int indexOf(TString str) {
         return indexOf(str, 0);
     }
 
     public int lastIndexOf(TString str, int fromIndex) {
-        fromIndex = Math.min(fromIndex, length() - str.length());
+        int length = charactersLength();
+        int otherLength = str.charactersLength();
+        if (fromIndex < 0) {
+            return -1;
+        }
+        if (PlatformDetector.isJavaScript()) {
+            return lastIndexOfJS(nativeString(), str.nativeString(), fromIndex);
+        }
+        fromIndex = Math.min(fromIndex, length - otherLength);
         outer:
         for (int i = fromIndex; i >= 0; --i) {
-            for (int j = 0; j < str.length(); ++j) {
-                if (charAt(i + j) != str.charAt(j)) {
+            for (int j = 0; j < otherLength; ++j) {
+                if (charactersGet(i + j) != str.charactersGet(j)) {
                     continue outer;
                 }
             }
@@ -421,6 +443,9 @@ public final class TString extends TObject implements TSerializable, TComparable
         }
         return -1;
     }
+
+    @NoSideEffects
+    private static native int lastIndexOfJS(Object value, Object search, int fromIndex);
 
     public int lastIndexOf(TString str) {
         return lastIndexOf(str, length());
@@ -468,23 +493,33 @@ public final class TString extends TObject implements TSerializable, TComparable
         var buffer = new char[length() + str.length()];
         int index = 0;
         for (int i = 0; i < length(); ++i) {
-            buffer[index++] = charAt(i);
+            buffer[index++] = charactersGet(i);
         }
         for (int i = 0; i < str.length(); ++i) {
-            buffer[index++] = str.charAt(i);
+            buffer[index++] = str.charactersGet(i);
         }
-        return TString.fromArray(buffer);
+        return fromArray(buffer);
     }
 
     public TString replace(char oldChar, char newChar) {
         if (oldChar == newChar) {
             return this;
         }
-        var buffer = new char[length()];
-        for (int i = 0; i < length(); ++i) {
-            buffer[i] = charAt(i) == oldChar ? newChar : charAt(i);
+        for (int i = 0; i < charactersLength(); ++i) {
+            if (charactersGet(i) == oldChar) {
+                var buffer = new char[charactersLength()];
+                for (var j = 0; j < i; ++j) {
+                    buffer[j] = charactersGet(j);
+                }
+                buffer[i++] = newChar;
+                for (; i < length(); ++i) {
+                    var c = charactersGet(i);
+                    buffer[i] = c == oldChar ? newChar : c;
+                }
+                return fromArray(buffer);
+            }
         }
-        return TString.fromArray(buffer);
+        return this;
     }
 
     public boolean contains(TCharSequence s) {
@@ -492,7 +527,7 @@ public final class TString extends TObject implements TSerializable, TComparable
         outer:
         for (int i = 0; i <= sz; ++i) {
             for (int j = 0; j < s.length(); ++j) {
-                if (charAt(i + j) != s.charAt(j)) {
+                if (charactersGet(i + j) != s.charAt(j)) {
                     continue outer;
                 }
             }
@@ -508,40 +543,103 @@ public final class TString extends TObject implements TSerializable, TComparable
             var sb = new StringBuilder();
             for (var i = 0; i < length(); ++i) {
                 sb.append(replacement);
-                sb.append(charAt(i));
+                sb.append(charactersGet(i));
             }
             sb.append(replacement);
             return sb.toString();
         } else if (target.length() == 1 && replacement.length() == 1) {
             return (String) (Object) replace(target.charAt(0), replacement.charAt(0));
+        } else if (target instanceof TString && replacement instanceof TString) {
+            return (String) (Object) replaceString((TString) target, (TString) replacement);
         } else {
-            var sb = new StringBuilder();
-            int sz = length() - target.length();
-            int i = 0;
-            outer:
-            for (; i <= sz; ++i) {
-                for (int j = 0; j < target.length(); ++j) {
-                    if (charAt(i + j) != target.charAt(j)) {
-                        sb.append(charAt(i));
-                        continue outer;
-                    }
-                }
-                sb.append(replacement);
-                i += target.length() - 1;
+            int first = indexOf(target, 0);
+            if (first < 0) {
+                return (String) (Object) this;
             }
-            sb.append(substring(i));
-
-            return sb.toString();
+            int targetLength = target.length();
+            int replacementLength = replacement.length();
+            int count = 0;
+            for (int i = first; i >= 0; i = indexOf(target, i + targetLength)) {
+                ++count;
+            }
+            var buffer = new char[replacedLength(count, targetLength, replacementLength)];
+            int src = 0;
+            int dst = 0;
+            for (int i = first; i >= 0; i = indexOf(target, i + targetLength)) {
+                while (src < i) {
+                    buffer[dst++] = charactersGet(src++);
+                }
+                for (int j = 0; j < replacementLength; ++j) {
+                    buffer[dst++] = replacement.charAt(j);
+                }
+                src = i + targetLength;
+            }
+            while (src < length()) {
+                buffer[dst++] = charactersGet(src++);
+            }
+            return (String) (Object) fromArray(buffer);
         }
+    }
+
+    private TString replaceString(TString target, TString replacement) {
+        int first = indexOf(target, 0);
+        if (first < 0) {
+            return this;
+        }
+        int targetLength = target.length();
+        int replacementLength = replacement.length();
+        int count = 0;
+        for (int i = first; i >= 0; i = indexOf(target, i + targetLength)) {
+            ++count;
+        }
+
+        var buffer = new char[replacedLength(count, targetLength, replacementLength)];
+        int src = 0;
+        int dst = 0;
+        for (int i = first; i >= 0; i = indexOf(target, i + targetLength)) {
+            while (src < i) {
+                buffer[dst++] = charactersGet(src++);
+            }
+            for (int j = 0; j < replacementLength; ++j) {
+                buffer[dst++] = replacement.charactersGet(j);
+            }
+            src = i + targetLength;
+        }
+        while (src < length()) {
+            buffer[dst++] = charactersGet(src++);
+        }
+        return fromArray(buffer);
+    }
+
+    private int replacedLength(int count, int targetLength, int replacementLength) {
+        int diff = replacementLength - targetLength;
+        if (diff > 0 && count > (Integer.MAX_VALUE - length()) / diff) {
+            throw new OutOfMemoryError();
+        }
+        return length() + count * diff;
+    }
+
+    private int indexOf(TCharSequence target, int fromIndex) {
+        int toIndex = length() - target.length();
+        outer:
+        for (int i = fromIndex; i <= toIndex; ++i) {
+            for (int j = 0; j < target.length(); ++j) {
+                if (charactersGet(i + j) != target.charAt(j)) {
+                    continue outer;
+                }
+            }
+            return i;
+        }
+        return -1;
     }
 
     public TString trim() {
         int lower = 0;
         int upper = length() - 1;
-        while (lower <= upper && charAt(lower) <= ' ') {
+        while (lower <= upper && charactersGet(lower) <= ' ') {
             ++lower;
         }
-        while (lower <= upper && charAt(upper) <= ' ') {
+        while (lower <= upper && charactersGet(upper) <= ' ') {
             --upper;
         }
         return substring(lower, upper + 1);
@@ -554,10 +652,10 @@ public final class TString extends TObject implements TSerializable, TComparable
         }
         var lower = 0;
         var upper = length() - 1;
-        while (lower <= upper && Character.isWhitespace(charAt(lower))) {
+        while (lower <= upper && Character.isWhitespace(charactersGet(lower))) {
             ++lower;
         }
-        while (lower <= upper && Character.isWhitespace(charAt(upper))) {
+        while (lower <= upper && Character.isWhitespace(charactersGet(upper))) {
             --upper;
         }
         return substring(lower, upper + 1);
@@ -571,7 +669,7 @@ public final class TString extends TObject implements TSerializable, TComparable
             return result != nativeString() ? new TString(result) : this;
         }
         var lower = 0;
-        while (lower < length() && Character.isWhitespace(charAt(lower))) {
+        while (lower < length() && Character.isWhitespace(charactersGet(lower))) {
             ++lower;
         }
         return substring(lower, length());
@@ -585,7 +683,7 @@ public final class TString extends TObject implements TSerializable, TComparable
             return result != nativeString() ? new TString(result) : this;
         }
         var upper = length() - 1;
-        while (0 <= upper && Character.isWhitespace(charAt(upper))) {
+        while (0 <= upper && Character.isWhitespace(charactersGet(upper))) {
             --upper;
         }
         return substring(0, upper + 1);
@@ -601,7 +699,7 @@ public final class TString extends TObject implements TSerializable, TComparable
     public char[] toCharArray() {
         char[] array = new char[charactersLength()];
         for (int i = 0; i < array.length; ++i) {
-            array[i] = charAt(i);
+            array[i] = charactersGet(i);
         }
         return array;
     }
@@ -665,18 +763,18 @@ public final class TString extends TObject implements TSerializable, TComparable
         if (this == other) {
             return true;
         }
-        if (!(other instanceof TString)) {
+        if (!(other instanceof TString str)) {
             return false;
         }
-        var str = (TString) other;
         if (PlatformDetector.isJavaScript()) {
             return nativeString() == str.nativeString();
         } else {
-            if (str.length() != length()) {
+            int length = charactersLength();
+            if (str.charactersLength() != length) {
                 return false;
             }
-            for (int i = 0; i < str.length(); ++i) {
-                if (charAt(i) != str.charAt(i)) {
+            for (int i = 0; i < length; ++i) {
+                if (charactersGet(i) != str.charactersGet(i)) {
                     return false;
                 }
             }
@@ -695,7 +793,7 @@ public final class TString extends TObject implements TSerializable, TComparable
             return false;
         }
         for (int i = 0; i < length(); ++i) {
-            if (TCharacter.toLowerCase(charAt(i)) != TCharacter.toLowerCase(other.charAt(i))) {
+            if (TCharacter.toLowerCase(charactersGet(i)) != TCharacter.toLowerCase(other.charactersGet(i))) {
                 return false;
             }
         }
@@ -730,12 +828,23 @@ public final class TString extends TObject implements TSerializable, TComparable
 
     @Override
     public int hashCode() {
-        if (hashCode == 0) {
-            for (var i = 0; i < charactersLength(); ++i) {
-                hashCode = 31 * hashCode + charactersGet(i);
+        var hash = hashCode;
+        if (hash == 0) {
+            var length = charactersLength();
+            var i = 0;
+            if (PlatformDetector.isWebAssemblyGC()) {
+                // Fold four UTF-16 units with powers of 31; int overflow preserves the Java hash.
+                for (; i <= length - 4; i += 4) {
+                    hash = 923521 * hash + 29791 * charactersGet(i) + 961 * charactersGet(i + 1)
+                            + 31 * charactersGet(i + 2) + charactersGet(i + 3);
+                }
             }
+            for (; i < length; ++i) {
+                hash = 31 * hash + charactersGet(i);
+            }
+            hashCode = hash;
         }
-        return hashCode;
+        return hash;
     }
 
     public TString toLowerCase() {
@@ -973,7 +1082,7 @@ public final class TString extends TObject implements TSerializable, TComparable
 
     public TString translateEscapes() {
         for (var i = 0; i < length(); ++i) {
-            var c = charAt(i);
+            var c = charactersGet(i);
             if (c == '\\') {
                 return translateEscapesImpl();
             }
@@ -985,13 +1094,13 @@ public final class TString extends TObject implements TSerializable, TComparable
         var chars = new char[length()];
         var j = 0;
         for (var i = 0; i < length(); ++i) {
-            var c = charAt(i);
+            var c = charactersGet(i);
             if (c == '\\') {
                 ++i;
                 if (i == length()) {
                     break;
                 }
-                switch (charAt(i)) {
+                switch (charactersGet(i)) {
                     case 'b':
                         chars[j++] = '\b';
                         break;
@@ -1030,7 +1139,7 @@ public final class TString extends TObject implements TSerializable, TComparable
                         var value = 0;
                         var max = Math.min(3, length() - i);
                         for (var k = 0; k < max; ++k) {
-                            c = charAt(i);
+                            c = charactersGet(i);
                             if (c >= '0' && c <= '7') {
                                 value = (value << 3) + (c - '0');
                                 ++i;
@@ -1056,7 +1165,7 @@ public final class TString extends TObject implements TSerializable, TComparable
             var currentIndentation = 0;
             char c;
             while (true) {
-                c = charAt(i);
+                c = charactersGet(i);
                 if (!Character.isWhitespace(c) || c == '\n' || c == '\r') {
                     break;
                 }
@@ -1070,9 +1179,9 @@ public final class TString extends TObject implements TSerializable, TComparable
             }
             bestIndentation = Math.min(bestIndentation, currentIndentation);
             while (i < length()) {
-                c = charAt(i++);
+                c = charactersGet(i++);
                 if (c == '\r') {
-                    if (i < length() && charAt(i) == '\n') {
+                    if (i < length() && charactersGet(i) == '\n') {
                         ++i;
                     }
                     break;
@@ -1092,9 +1201,9 @@ public final class TString extends TObject implements TSerializable, TComparable
             char c;
             i += bestIndentation;
             while (i < length()) {
-                c = charAt(i++);
+                c = charactersGet(i++);
                 if (c == '\r') {
-                    if (i < length() && charAt(i) == '\n') {
+                    if (i < length() && charactersGet(i) == '\n') {
                         ++i;
                     }
                     result[outIndex++] = '\n';

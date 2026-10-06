@@ -25,6 +25,7 @@ public interface TIterator<E> {
     void remove();
 
     default void forEachRemaining(Consumer<? super E> action) {
+        TObjects.requireNonNull(action);
         while (hasNext()) {
             action.accept(next());
         }

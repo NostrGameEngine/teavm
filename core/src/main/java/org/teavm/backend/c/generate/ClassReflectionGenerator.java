@@ -478,6 +478,10 @@ class ClassReflectionGenerator {
                     paramGenericType = pt;
                 }
             }
+            if (annots.isEmpty() && paramGenericType == null) {
+                writer.print("{ 0 }");
+                continue;
+            }
             writer.print("{");
             if (!annots.isEmpty()) {
                 writer.print(" .annotations = ");
@@ -531,12 +535,18 @@ class ClassReflectionGenerator {
             return;
         }
 
+        var fields = ClassGenerator.getAnnotationDataFields(context, cls);
+        if (fields.isEmpty()) {
+            writer.print("NULL");
+            return;
+        }
+
         var dataClass = annotation.getType() + AnnotationGenerationHelper.ANNOTATION_DATA_SUFFIX;
         includes.includeClass(dataClass);
         writer.print("&(").print(context.getNames().forClass(dataClass)).println(") {").indent();
 
         var first = true;
-        for (var method : cls.getMethods()) {
+        for (var method : fields) {
             if (!first) {
                 writer.println(",");
             }
@@ -576,10 +586,10 @@ class ClassReflectionGenerator {
                 CodeGeneratorUtil.writeValue(writer, value.getLong());
                 break;
             case AnnotationValue.FLOAT:
-                CodeGeneratorUtil.writeValue(writer, value.getFloat());
+                CodeGeneratorUtil.writeValue(writer, includes, value.getFloat());
                 break;
             case AnnotationValue.DOUBLE:
-                CodeGeneratorUtil.writeValue(writer, value.getDouble());
+                CodeGeneratorUtil.writeValue(writer, includes, value.getDouble());
                 break;
             case AnnotationValue.STRING:
                 writer.print("(TeaVM_Object**) TEAVM_GET_STRING_ADDRESS("

@@ -15,10 +15,9 @@
  */
 package org.teavm.vm;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.Test;
 import org.teavm.interop.Async;
 import org.teavm.interop.AsyncCallback;
 import org.teavm.interop.Intrinsified;
@@ -39,10 +38,10 @@ import org.teavm.junit.JsModuleTest;
 import org.teavm.junit.OnlyPlatform;
 import org.teavm.junit.ServeJS;
 import org.teavm.junit.SkipJVM;
-import org.teavm.junit.TeaVMTestRunner;
+import org.teavm.junit.TeaVMTest;
 import org.teavm.junit.TestPlatform;
 
-@RunWith(TeaVMTestRunner.class)
+@TeaVMTest
 @EachTestCompiledSeparately
 @OnlyPlatform(TestPlatform.WEBASSEMBLY_GC)
 @SkipJVM

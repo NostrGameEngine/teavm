@@ -15,24 +15,210 @@
  */
 package org.teavm.classlib.java.lang;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.UnsupportedEncodingException;
 import java.util.Locale;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.teavm.junit.EachTestCompiledSeparately;
 import org.teavm.junit.SkipPlatform;
-import org.teavm.junit.TeaVMTestRunner;
+import org.teavm.junit.TeaVMTest;
 import org.teavm.junit.TestPlatform;
 
-@RunWith(TeaVMTestRunner.class)
+@TeaVMTest
 @EachTestCompiledSeparately
 public class StringTest {
+    @Test
+    public void nullStringCopyThrowsJavaException() {
+        assertThrows(NullPointerException.class, () -> {
+            new String((String) null);
+        });
+    }
+
+    @Test
+    public void hashCodeMatchesHotSpotUtf16Fixtures() {
+        char[] characters = new char[65536];
+        for (int i = 0; i < characters.length; ++i) {
+            characters[i] = (char) i;
+        }
+        String[] values = { "abc", "Aa", "BB", "polygenelubricants", "\ud800", "\ud800\udfff",
+                new String(characters), "nostr4j\u0000\ud800\udfff".repeat(1024) };
+        int[] hashes = { 96354, 2112, 2112, -2147483648, 55296, 1771519, 2130739200, -1338940416 };
+        for (int i = 0; i < values.length; ++i) {
+            assertEquals(hashes[i], values[i].hashCode());
+            assertEquals(hashes[i], new String(values[i]).hashCode());
+            assertEquals(hashes[i], values[i].hashCode());
+        }
+    }
+
+    @Test
+    public void zeroHashesAndIndependentCopiesRemainCorrect() {
+        String value = "\u0000".repeat(8192);
+        assertEquals(0, value.hashCode());
+        assertEquals(0, value.hashCode());
+        assertEquals(0, new String(value).hashCode());
+        String original = "polygenelubricants";
+        original.hashCode();
+        String copy = new String(original);
+        org.junit.jupiter.api.Assertions.assertNotSame(original, copy);
+        assertEquals(-2147483648, copy.hashCode());
+    }
+
+    @Test
+    public void substringSearchPreservesBoundsAndUtf16() {
+        String value = "a\u0000\ud800b\ud83d\ude00a\u0000\ud800b";
+        assertEquals(0, value.indexOf("", -1));
+        assertEquals(value.length(), value.indexOf("", Integer.MAX_VALUE));
+        assertEquals(-1, value.lastIndexOf("", -1));
+        assertEquals(value.length(), value.lastIndexOf("", Integer.MAX_VALUE));
+        assertEquals(1, value.indexOf("\u0000\ud800b", Integer.MIN_VALUE));
+        assertEquals(7, value.indexOf("\u0000\ud800b", 2));
+        assertEquals(-1, value.indexOf("\u0000\ud800b", Integer.MAX_VALUE));
+        assertEquals(7, value.lastIndexOf("\u0000\ud800b", Integer.MAX_VALUE));
+        assertEquals(1, value.lastIndexOf("\u0000\ud800b", 6));
+        assertEquals(4, value.indexOf("\ud83d\ude00"));
+        assertEquals(5, value.lastIndexOf("\ude00", 5));
+        assertEquals(-1, value.indexOf(value + "x"));
+        assertEquals(-1, value.lastIndexOf(value + "x"));
+        assertEquals(0, "".indexOf("", Integer.MAX_VALUE));
+        assertEquals(0, "".lastIndexOf("", Integer.MAX_VALUE));
+        try {
+            value.indexOf(null, -1);
+            throw new AssertionError("Null search succeeded");
+        } catch (NullPointerException expected) {
+            assertEquals(-1, value.indexOf("missing"));
+        }
+        try {
+            value.lastIndexOf(null, -1);
+            throw new AssertionError("Null search succeeded");
+        } catch (NullPointerException expected) {
+            assertEquals(-1, value.lastIndexOf("missing"));
+        }
+    }
+
+    @Test
+    public void stringPoolPreservesWtf8BoundariesAndSurrogates() {
+        String value = "\0\u007f\u0080\u07ff\u0800\ud800\udc00\udfff\uffff";
+        char[] expected = { 0, 0x7f, 0x80, 0x7ff, 0x800, 0xd800, 0xdc00, 0xdfff, 0xffff };
+        assertArrayEquals(expected, value.toCharArray());
+        assertEquals(new String(expected), value);
+        assertSame(value, new String(expected).intern());
+    }
+
+    @Test
+    public void stringPoolRetainsAdjacentEmptyAndMixedConstants() {
+        String[] values = { "", "ASCII", "\u0800middle\u0080", "\ud83d\ude00", "\ud800x\udfff" };
+        char[][] expected = { {}, { 'A', 'S', 'C', 'I', 'I' },
+                { 0x800, 'm', 'i', 'd', 'd', 'l', 'e', 0x80 }, { 0xd83d, 0xde00 }, { 0xd800, 'x', 0xdfff } };
+        for (int i = 0; i < values.length; i++) {
+            assertArrayEquals(expected[i], values[i].toCharArray());
+            assertSame(values[i], new String(expected[i]).intern());
+        }
+    }
+
+    @Test
+    public void stringPoolPreservesControlCharactersNextToDigits() {
+        String value = "\u007f7\u00808\u00859\u009f0\u00a0f";
+        char[] expected = { 0x7f, '7', 0x80, '8', 0x85, '9', 0x9f, '0', 0xa0, 'f' };
+        assertArrayEquals(expected, value.toCharArray());
+        assertSame(value, new String(expected).intern());
+    }
+
+    @Test
+    public void comparisonReturnsExactUtf16Difference() {
+        for (int length : new int[] { 1, 16, 64, 257, 1024 }) {
+            char[] leftChars = new char[length];
+            for (int i = 0; i < length; i++) {
+                leftChars[i] = (char) (i * 8191);
+            }
+            String left = new String(leftChars);
+            assertEquals(0, left.compareTo(new String(leftChars)));
+            for (int i = 0; i < length; i++) {
+                char original = leftChars[i];
+                leftChars[i] ^= 0xffff;
+                String right = new String(leftChars);
+                int difference = original - leftChars[i];
+                assertEquals(difference, left.compareTo(right));
+                assertEquals(-difference, right.compareTo(left));
+                leftChars[i] = original;
+            }
+            assertEquals(-3, left.compareTo(left + "xyz"));
+            assertEquals(3, (left + "xyz").compareTo(left));
+        }
+    }
+
+    @Test
+    public void comparisonHandlesEmptySlicesAndNull() {
+        assertEquals(0, "".compareTo(new String(new char[0])));
+        assertEquals(-2, "".compareTo("ab"));
+        assertEquals(2, "ab".compareTo(""));
+        String slice = new String(new char[] { 'x', 0, 0xd800, 0xdc00, 0xffff, 'y' }, 1, 4);
+        assertEquals(0, slice.compareTo(new String(slice.toCharArray())));
+        assertEquals(0, slice.compareTo(("x" + slice + "y").substring(1, 5)));
+        try {
+            slice.compareTo(null);
+            throw new AssertionError("Null comparison succeeded");
+        } catch (NullPointerException expected) {
+            // The public method must retain Java's null check.
+        }
+    }
+
+    @Test
+    public void equalityHandlesEmptyNullAndOtherTypes() {
+        String empty = new String(new char[0]);
+        assertTrue(empty.equals(""));
+        assertTrue(empty.equals(empty));
+        assertFalse(empty.equals(null));
+        assertFalse(empty.equals(new StringBuilder()));
+        assertFalse(empty.equals("a"));
+        assertFalse("a".equals(empty));
+        assertFalse("a".equals("ab"));
+        assertFalse("ab".equals("a"));
+    }
+
+    @Test
+    public void equalityComparesAllUtf16CodeUnits() {
+        int[] lengths = { 1, 2, 15, 16, 63, 64, 65, 1024 };
+        for (int length : lengths) {
+            char[] characters = new char[length];
+            for (int i = 0; i < length; i++) {
+                characters[i] = (char) (i * 8191);
+            }
+            String left = new String(characters);
+            String right = new String(characters);
+            assertTrue(left.equals(right));
+            for (int i = 0; i < length; i++) {
+                characters[i] ^= 1;
+                String different = new String(characters);
+                assertFalse(left.equals(different));
+                assertFalse(different.equals(right));
+                characters[i] ^= 1;
+            }
+            assertTrue(left.equals(right));
+        }
+        String surrogate = new String(new char[] { 0, 0xd800, 0xdc00, 0xdfff, 0xffff });
+        assertTrue(surrogate.equals(new String(surrogate.toCharArray())));
+        assertFalse(surrogate.equals(new String(new char[] { 0, 0xd800, 0xdc00, 0xdffe, 0xffff })));
+    }
+
+    @Test
+    public void equalityRespectsSlicesAndCopiedStorage() {
+        char[] characters = { 'x', 'a', 0xd800, 0, 'b', 'y' };
+        String sliced = new String(characters, 1, 4);
+        String copied = new String(sliced.toCharArray());
+        String substring = new String(characters).substring(1, 5);
+        assertTrue(sliced.equals(copied));
+        assertTrue(sliced.equals(substring));
+        characters[1] = 'z';
+        assertTrue(sliced.equals(copied));
+        assertFalse(sliced.equals(new String(characters, 1, 4)));
+    }
+
     @Test
     public void charsExtracted() {
         String str = "123";
@@ -200,6 +386,22 @@ public class StringTest {
         assertEquals("xaxaxax", "aaa".replace("", "x"));
         assertEquals("axc", "abc".replace("b", "x"));
         assertEquals("abc", "abc".replace("bc", "bc"));
+        assertEquals("xyzbxyz", "abcbabc".replace("abc", "xyz"));
+        assertEquals("[]b[]b[]", "aabaabaa".replace("aa", "[]"));
+        assertEquals("--", "abcabc".replace("abc", "-"));
+        assertEquals("", "abcabc".replace("abc", ""));
+        assertEquals("aXYZXYZb", "a12b".replace(new StringBuilder("1"), "XYZ").replace("2", "XYZ"));
+        assertEquals("ab", "ab".replace("abc", "x"));
+        assertEquals("[]b[]", "aabaa".replace(new StringBuilder("aa"), new StringBuilder("[]")));
+        assertEquals("-b-", "aabaa".replace(new StringBuilder("aa"), "-"));
+        assertSame("ab", "ab".replace(new StringBuilder("ac"), "x"));
+    }
+
+    @Test
+    public void sequenceReplaceReturnsSameStringWhenNotFound() {
+        var s = new String(new char[] { 'a', 'b', 'c' });
+        assertSame(s, s.replace("bd", "x"));
+        assertSame(s, s.replace("d", "x"));
     }
 
     @Test

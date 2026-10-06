@@ -23,8 +23,13 @@ description = "Test runner for JUnit and TestNG annotations"
 
 
 dependencies {
+    testImplementation(libs.junit)
+    testImplementation(libs.testng)
+
     compileOnly(libs.junit)
     compileOnly(libs.testng)
+    compileOnly(libs.junit.jupiter.api)
+    compileOnly(libs.junit.jupiter.params)
     compileOnly(project(":jso:core"))
     compileOnly(project(":classlib"))
 
@@ -36,4 +41,11 @@ dependencies {
 
 teavmPublish {
     artifactId = "teavm-junit"
+}
+
+tasks.test {
+    // These tests inspect discovery metadata without compiling a target.
+    systemProperty("teavm.junit.js", "false")
+    systemProperty("teavm.junit.wasm-gc", "false")
+    systemProperty("teavm.junit.c", "false")
 }

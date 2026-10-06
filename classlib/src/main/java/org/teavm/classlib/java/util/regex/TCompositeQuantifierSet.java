@@ -72,6 +72,7 @@ class TCompositeQuantifierSet extends TLeafQuantifierSet {
         for (; i < max; i++) {
             int shift;
             if (stringIndex + leaf.charCount() > matchResult.getRightBound()) {
+                matchResult.hitEnd = true;
                 break;
             }
             shift = leaf.accepts(stringIndex, testString);
@@ -103,5 +104,13 @@ class TCompositeQuantifierSet extends TLeafQuantifierSet {
 
     void setQuantifier(TQuantifier quant) {
         this.quantifier = quant;
+    }
+
+    @Override
+    void describe(TPatternWriter writer) {
+        if (leaf != innerSet) {
+            throw TPatternWriter.unsupported();
+        }
+        writer.create(this, TCompositeQuantifierSet.class, "compositeQuantifierSet", quantifier, leaf, type);
     }
 }

@@ -118,6 +118,8 @@ public class WasmGCDependencies {
         analyzer.linkMethod(new MethodReference(WasmGCSupport.class, "aiiobe", ArrayIndexOutOfBoundsException.class))
                 .use();
         analyzer.linkMethod(new MethodReference(WasmGCSupport.class, "cce", ClassCastException.class)).use();
+        analyzer.linkMethod(new MethodReference(WasmGCSupport.class, "throwNegativeArraySizeException",
+                void.class)).use();
         analyzer.linkMethod(new MethodReference(WasmGCSupport.class, "throwCloneNotSupportedException",
                 void.class)).use();
         analyzer.linkMethod(new MethodReference(WasmGCSupport.class, "defaultClone", Object.class, Object.class)).use();
@@ -151,8 +153,12 @@ public class WasmGCDependencies {
     }
 
     private void contributeFiber() {
-        analyzer.linkMethod(new MethodReference(Fiber.class, "isResuming", boolean.class)).use();
-        analyzer.linkMethod(new MethodReference(Fiber.class, "isSuspending", boolean.class)).use();
+        analyzer.linkMethod(new MethodReference(Fiber.class, "isPresentAndResuming", Fiber.class, boolean.class))
+                .propagate(1, Fiber.class)
+                .use();
+        analyzer.linkMethod(new MethodReference(Fiber.class, "isPresentAndSuspending", Fiber.class, boolean.class))
+                .propagate(1, Fiber.class)
+                .use();
         analyzer.linkMethod(new MethodReference(Fiber.class, "current", Fiber.class)).use();
         analyzer.linkMethod(new MethodReference(Thread.class, "setCurrentThread", Thread.class,
                 void.class)).use();

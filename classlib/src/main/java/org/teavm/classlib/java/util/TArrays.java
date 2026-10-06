@@ -1870,6 +1870,28 @@ public class TArrays extends TObject {
         @Override public int size() {
             return array.length;
         }
+
+        @Override
+        public Object[] toArray() {
+            Object[] copy = new Object[array.length];
+            System.arraycopy(array, 0, copy, 0, array.length);
+            return copy;
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public <S> S[] toArray(S[] target) {
+            Objects.requireNonNull(target);
+            S[] copy = target;
+            if (target.length < array.length) {
+                copy = (S[]) Array.newInstance(target.getClass().getComponentType(), array.length);
+            }
+            System.arraycopy(array, 0, copy, 0, array.length);
+            if (copy.length > array.length) {
+                copy[array.length] = null;
+            }
+            return copy;
+        }
     }
 
     public static String deepToString(Object[] a) {

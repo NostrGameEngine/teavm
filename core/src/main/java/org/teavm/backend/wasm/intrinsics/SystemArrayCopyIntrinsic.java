@@ -132,8 +132,8 @@ public class SystemArrayCopyIntrinsic implements WasmGCInlineIntrinsic {
 
         var sourceItemType = ((ValueType.Array) sourceType.valueType).getItemType();
         var targetItemType = ((ValueType.Array) targetType.valueType).getItemType();
-        if (sourceItemType != targetItemType
-                || !hierarchy.isSuperType(targetItemType, sourceItemType, false)) {
+        // Static reference-array types do not prove the runtime component type of the destination.
+        if (!(targetItemType instanceof ValueType.Primitive) || !sourceItemType.equals(targetItemType)) {
             return false;
         }
 

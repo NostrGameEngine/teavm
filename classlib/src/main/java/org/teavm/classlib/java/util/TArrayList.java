@@ -15,6 +15,7 @@
  */
 package org.teavm.classlib.java.util;
 
+import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -42,11 +43,38 @@ public class TArrayList<E> extends TAbstractList<E> implements TCloneable, TSeri
 
     public TArrayList(TCollection<? extends E> c) {
         this(c.size());
-        TIterator<? extends E> iter = c.iterator();
-        for (int i = 0; i < array.length; ++i) {
-            array[i] = iter.next();
+        if (c.getClass() == TArrayList.class) {
+            TArrayList<?> source = (TArrayList<?>) c;
+            System.arraycopy(source.array, 0, array, 0, array.length);
+        } else {
+            TIterator<? extends E> iter = c.iterator();
+            for (int i = 0; i < array.length; ++i) {
+                array[i] = iter.next();
+            }
         }
         size = array.length;
+    }
+
+    @Override
+    public Object[] toArray() {
+        Object[] copy = new Object[size];
+        System.arraycopy(array, 0, copy, 0, size);
+        return copy;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> T[] toArray(T[] target) {
+        Objects.requireNonNull(target);
+        T[] copy = target;
+        if (target.length < size) {
+            copy = (T[]) Array.newInstance(target.getClass().getComponentType(), size);
+        }
+        System.arraycopy(array, 0, copy, 0, size);
+        if (copy.length > size) {
+            copy[size] = null;
+        }
+        return copy;
     }
 
     public void trimToSize() {
@@ -83,6 +111,50 @@ public class TArrayList<E> extends TAbstractList<E> implements TCloneable, TSeri
     @Override
     public int size() {
         return size;
+    }
+
+    @Override
+    public boolean contains(Object o) {
+        return indexOf(o) >= 0;
+    }
+
+    @Override
+    public int indexOf(Object o) {
+        E[] elements = array;
+        int end = size;
+        if (o == null) {
+            for (int i = 0; i < end; i++) {
+                if (elements[i] == null) {
+                    return i;
+                }
+            }
+        } else {
+            for (int i = 0; i < end; i++) {
+                if (o.equals(elements[i])) {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+
+    @Override
+    public int lastIndexOf(Object o) {
+        E[] elements = array;
+        if (o == null) {
+            for (int i = size - 1; i >= 0; i--) {
+                if (elements[i] == null) {
+                    return i;
+                }
+            }
+        } else {
+            for (int i = size - 1; i >= 0; i--) {
+                if (o.equals(elements[i])) {
+                    return i;
+                }
+            }
+        }
+        return -1;
     }
 
     @Rename("clone")
@@ -237,6 +309,7 @@ public class TArrayList<E> extends TAbstractList<E> implements TCloneable, TSeri
 
     @Override
     public void forEach(Consumer<? super E> action) {
+        Objects.requireNonNull(action);
         for (int i = 0; i < size; i++) {
             action.accept(array[i]);
         }

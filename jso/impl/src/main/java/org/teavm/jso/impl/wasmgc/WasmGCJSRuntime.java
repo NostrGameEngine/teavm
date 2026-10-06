@@ -25,12 +25,41 @@ final class WasmGCJSRuntime {
 
     private static boolean stringBuiltinsSupported = stringBuiltinsSupported();
 
+    private static final int MAX_CACHED_UNITS = 262144;
+    private static final int MAX_CACHED_STRINGS = 64;
+    private static final int MIN_CACHED_UNITS = 4096;
+    private static final CachedString[] cachedStrings = new CachedString[MAX_CACHED_STRINGS];
+
+    private static final class CachedString {
+        final String string;
+        final JSObject value;
+
+        CachedString(String string, JSObject value) {
+            this.string = string;
+            this.value = value;
+        }
+    }
+
+    private static int firstCachedString;
+    private static int cachedStringCount;
+    private static int cachedUnits;
+
     static JSObject stringToJs(String str) {
         if (str == null) {
             return null;
         }
+        var characters = CharArrayData.of(str);
+        var length = str.length();
+        if (length >= MIN_CACHED_UNITS && length <= MAX_CACHED_UNITS) {
+            for (var i = 0; i < cachedStringCount; ++i) {
+                var index = (firstCachedString + i) % MAX_CACHED_STRINGS;
+                if (cachedStrings[index].string == str) {
+                    return cachedStrings[index].value;
+                }
+            }
+        }
         if (stringBuiltinsSupported) {
-            return stringFromCharArray(CharArrayData.of(str), 0, str.length()).toNullable();
+            return cacheExport(str, stringFromCharArray(characters, 0, length).toNullable());
         } else {
             if (str.isEmpty()) {
                 return substring(stringFromCharCode(32).toNullable(), 0, 0).toNullable();
@@ -39,7 +68,7 @@ final class WasmGCJSRuntime {
             for (var i = 1; i < str.length(); ++i) {
                 result = concatStrings(result, stringFromCharCode(str.charAt(i)).toNullable()).toNullable();
             }
-            return result;
+            return cacheExport(str, result);
         }
     }
 
@@ -57,7 +86,25 @@ final class WasmGCJSRuntime {
                 chars.put(i, code);
             }
         }
+        // Do not retain native inputs: even a small substring can keep a large host buffer alive.
         return chars.asString();
+    }
+
+    private static JSObject cacheExport(String string, JSObject value) {
+        var length = string.length();
+        if (length >= MIN_CACHED_UNITS && length <= MAX_CACHED_UNITS) {
+            while (cachedStringCount == MAX_CACHED_STRINGS || cachedUnits + length > MAX_CACHED_UNITS) {
+                cachedUnits -= cachedStrings[firstCachedString].string.length();
+                cachedStrings[firstCachedString] = null;
+                firstCachedString = (firstCachedString + 1) % MAX_CACHED_STRINGS;
+                --cachedStringCount;
+            }
+            var index = (firstCachedString + cachedStringCount) % MAX_CACHED_STRINGS;
+            cachedStrings[index] = new CachedString(string, value);
+            cachedUnits += length;
+            ++cachedStringCount;
+        }
+        return value;
     }
 
     @Import(name = "length", module = "wasm:js-string")

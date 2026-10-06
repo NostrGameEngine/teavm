@@ -33,26 +33,36 @@ public abstract class TAbstractList<E> extends TAbstractCollection<E> implements
 
     @Override
     public TIterator<E> iterator() {
+        return iterator(this, true);
+    }
+
+    static <T> TIterator<T> iterator(TAbstractList<? extends T> list, boolean supportsRemove) {
         return new TIterator<>() {
             private int index;
-            private int modCount = TAbstractList.this.modCount;
-            private int size = size();
+            private int modCount = list.modCount;
+            private int size = list.size();
             private int removeIndex = -1;
             @Override public boolean hasNext() {
                 return index < size;
             }
-            @Override public E next() {
+            @Override public T next() {
                 checkConcurrentModification();
+                if (index >= size) {
+                    throw new TNoSuchElementException();
+                }
                 removeIndex = index;
-                return get(index++);
+                return list.get(index++);
             }
             @Override public void remove() {
+                if (!supportsRemove) {
+                    throw new TUnsupportedOperationException();
+                }
                 if (removeIndex < 0) {
                     throw new TIllegalStateException();
                 }
                 checkConcurrentModification();
-                TAbstractList.this.remove(removeIndex);
-                modCount = TAbstractList.this.modCount;
+                list.remove(removeIndex);
+                modCount = list.modCount;
                 if (removeIndex < index) {
                     --index;
                 }
@@ -60,7 +70,7 @@ public abstract class TAbstractList<E> extends TAbstractCollection<E> implements
                 removeIndex = -1;
             }
             private void checkConcurrentModification() {
-                if (modCount != TAbstractList.this.modCount) {
+                if (modCount != list.modCount) {
                     throw new TConcurrentModificationException();
                 }
             }
@@ -130,6 +140,9 @@ public abstract class TAbstractList<E> extends TAbstractCollection<E> implements
 
     @Override
     public TListIterator<E> listIterator(int index) {
+        if (index < 0 || index > size()) {
+            throw new TIndexOutOfBoundsException();
+        }
         return new TListIteratorImpl(index, modCount, size());
     }
 
@@ -253,7 +266,10 @@ public abstract class TAbstractList<E> extends TAbstractCollection<E> implements
             TAbstractList.this.set(j, e);
         }
         @Override public void add(E e) {
-            TAbstractList.this.add(i++, e);
+            checkConcurrentModification();
+            TAbstractList.this.add(i, e);
+            ++i;
+            ++sz;
             lastModCount = modCount;
             j = -1;
         }

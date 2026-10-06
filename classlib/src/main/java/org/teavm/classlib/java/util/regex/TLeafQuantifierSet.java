@@ -53,7 +53,11 @@ class TLeafQuantifierSet extends TQuantifierSet {
         int i = 0;
         int shift = 0;
 
-        while (stringIndex + leaf.charCount() <= matchResult.getRightBound()) {
+        while (true) {
+            if (stringIndex + leaf.charCount() > matchResult.getRightBound()) {
+                matchResult.hitEnd = true;
+                break;
+            }
             shift = leaf.accepts(stringIndex, testString);
             if (shift <= 0) {
                 break;
@@ -91,5 +95,13 @@ class TLeafQuantifierSet extends TQuantifierSet {
         }
         super.setInnerSet(innerSet);
         this.leaf = (TLeafSet) innerSet;
+    }
+
+    @Override
+    void describe(TPatternWriter writer) {
+        if (leaf != innerSet) {
+            throw TPatternWriter.unsupported();
+        }
+        writer.create(this, TLeafQuantifierSet.class, "leafQuantifierSet", leaf, type);
     }
 }

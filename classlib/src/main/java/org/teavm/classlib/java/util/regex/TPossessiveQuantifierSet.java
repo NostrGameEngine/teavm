@@ -50,7 +50,11 @@ class TPossessiveQuantifierSet extends TLeafQuantifierSet {
     @Override
     public int matches(int stringIndex, CharSequence testString, TMatchResultImpl matchResult) {
         int shift = 0;
-        while (stringIndex + leaf.charCount() <= matchResult.getRightBound()) {
+        while (true) {
+            if (stringIndex + leaf.charCount() > matchResult.getRightBound()) {
+                matchResult.hitEnd = true;
+                break;
+            }
             shift = leaf.accepts(stringIndex, testString);
             if (shift < 1) {
                 break;
@@ -59,5 +63,13 @@ class TPossessiveQuantifierSet extends TLeafQuantifierSet {
         }
 
         return next.matches(stringIndex, testString, matchResult);
+    }
+
+    @Override
+    void describe(TPatternWriter writer) {
+        if (leaf != innerSet) {
+            throw TPatternWriter.unsupported();
+        }
+        writer.create(this, TPossessiveQuantifierSet.class, "possessiveQuantifierSet", leaf, type);
     }
 }

@@ -42,12 +42,15 @@ import org.teavm.backend.wasm.intrinsics.reflection.StringInfoIntrinsic;
 import org.teavm.backend.wasm.intrinsics.reflection.TypeVariableInfoIntrinsic;
 import org.teavm.backend.wasm.intrinsics.reflection.TypeVariableReferenceIntrinsic;
 import org.teavm.backend.wasm.intrinsics.reflection.WildcardTypeInfoIntrinsic;
+import org.teavm.backend.wasm.model.instruction.WasmFloatType;
+import org.teavm.backend.wasm.model.instruction.WasmFloatUnaryOperation;
 import org.teavm.backend.wasm.model.instruction.WasmIntType;
 import org.teavm.backend.wasm.runtime.StringInternPool;
 import org.teavm.backend.wasm.runtime.WasmGCSupport;
 import org.teavm.interop.Address;
 import org.teavm.interop.Structure;
 import org.teavm.model.MethodReference;
+import org.teavm.model.ValueType;
 import org.teavm.reflection.AnnotationGenerationHelper;
 import org.teavm.reflection.ReflectionDependencyListener;
 import org.teavm.runtime.EventQueue;
@@ -93,6 +96,7 @@ public class WasmGCIntrinsics {
                 "intBitsToFloat");
         inlineReg.registerIntrinsic(Double.class, new DoubleIntrinsic(), "isNaN", "isFinite", "doubleToRawLongBits",
                 "longBitsToDouble");
+        fillMath(inlineReg);
         inlineReg.registerIntrinsic(StringInternPool.class.getName() + "$Entry", new StringInternPoolIntrinsic(
                     ctx.classInfoProvider(), ctx.functionTypes(), ctx.typeMapper(), ctx.names(), ctx.module()));
         fillReflection(inlineReg, ctx, reflection);
@@ -107,6 +111,31 @@ public class WasmGCIntrinsics {
             WasmGCCodeGenContext ctx) {
         reg.registerIntrinsic(Integer.class, new IntNumIntrinsic(int.class, WasmIntType.INT32, ctx.functions()));
         reg.registerIntrinsic(Long.class, new IntNumIntrinsic(long.class, WasmIntType.INT64, ctx.functions()));
+    }
+
+    private static void fillMath(IntrinsicRegistry<WasmGCInlineIntrinsic> reg) {
+        var doubleIntrinsic = new MathMinMaxIntrinsic(WasmFloatType.FLOAT64);
+        var floatIntrinsic = new MathMinMaxIntrinsic(WasmFloatType.FLOAT32);
+        reg.registerIntrinsic(new MethodReference(Math.class, "min", double.class, double.class, double.class),
+                doubleIntrinsic);
+        reg.registerIntrinsic(new MethodReference(Math.class, "max", double.class, double.class, double.class),
+                doubleIntrinsic);
+        reg.registerIntrinsic(new MethodReference(Math.class, "min", float.class, float.class, float.class),
+                floatIntrinsic);
+        reg.registerIntrinsic(new MethodReference(Math.class, "max", float.class, float.class, float.class),
+                floatIntrinsic);
+        reg.registerIntrinsic(new MethodReference(Math.class, "abs", double.class, double.class),
+                new MathUnaryIntrinsic(WasmFloatType.FLOAT64, WasmFloatUnaryOperation.ABS));
+        reg.registerIntrinsic(new MethodReference(Math.class, "abs", float.class, float.class),
+                new MathUnaryIntrinsic(WasmFloatType.FLOAT32, WasmFloatUnaryOperation.ABS));
+        reg.registerIntrinsic(new MethodReference(Math.class, "sqrt", double.class, double.class),
+                new MathUnaryIntrinsic(WasmFloatType.FLOAT64, WasmFloatUnaryOperation.SQRT));
+        reg.registerIntrinsic(new MethodReference(Math.class, "floor", double.class, double.class),
+                new MathUnaryIntrinsic(WasmFloatType.FLOAT64, WasmFloatUnaryOperation.FLOOR));
+        reg.registerIntrinsic(new MethodReference(Math.class, "ceil", double.class, double.class),
+                new MathUnaryIntrinsic(WasmFloatType.FLOAT64, WasmFloatUnaryOperation.CEIL));
+        reg.registerIntrinsic(new MethodReference(Math.class.getName(), "rintImpl", ValueType.DOUBLE, ValueType.DOUBLE),
+                new MathUnaryIntrinsic(WasmFloatType.FLOAT64, WasmFloatUnaryOperation.NEAREST));
     }
 
     private static void fillReflection(IntrinsicRegistry<WasmGCInlineIntrinsic> reg,

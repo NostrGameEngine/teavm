@@ -76,7 +76,7 @@ public abstract class TExecutable extends TAccessibleObject implements TMember, 
         var count = methodInfo.checkedExceptionCount();
         var result = new TClass<?>[count];
         for (var i = 0; i < count; ++i) {
-            result[i] = (TClass<?>) (Object) ClassInfoUtil.resolve(methodInfo.checkedExceptionType(i)).classObject();
+            result[i] = (TClass<?>) (Object) methodInfo.checkedExceptionType(i).classObject();
         }
         return result;
     }
@@ -108,6 +108,7 @@ public abstract class TExecutable extends TAccessibleObject implements TMember, 
 
     public TAnnotation[][] getParameterAnnotations() {
         if (parameterAnnotations == null) {
+            resolveParameterTypes();
             parameterAnnotations = new TAnnotation[parameterTypes.length][];
             var reflection = methodInfo.reflection();
             if (reflection != null) {
@@ -174,7 +175,7 @@ public abstract class TExecutable extends TAccessibleObject implements TMember, 
 
     void validateArgs(Object[] args) {
         resolveParameterTypes();
-        for (int i = 0; i < args.length; ++i) {
+        for (int i = 0; i < parameterTypes.length; ++i) {
             var parameterType = parameterType(i);
             if (parameterType.getClassInfo().primitiveKind() == ClassInfo.PrimitiveKind.NOT) {
                 if (args[i] != null && !parameterType.isInstance(args[i])) {
