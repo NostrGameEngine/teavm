@@ -246,10 +246,16 @@ public final class Fiber {
         Thread javaThread = Thread.currentThread();
         if (fiber.isResuming()) {
             fiber.state = STATE_RUNNING;
-            if (fiber.exception != null) {
-                throw fiber.exception;
+            // A resumed result belongs to this suspension only. In particular, a
+            // handled rejection must not poison the next await on a reused worker.
+            var exception = fiber.exception;
+            var result = fiber.result;
+            fiber.exception = null;
+            fiber.result = null;
+            if (exception != null) {
+                throw exception;
             }
-            return fiber.result;
+            return result;
         }
         PendingCall pendingCall = new PendingCall(call, lastPendingCall);
         if (lastPendingCall != null) {

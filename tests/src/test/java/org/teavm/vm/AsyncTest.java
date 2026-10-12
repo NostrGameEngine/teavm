@@ -138,6 +138,19 @@ public class AsyncTest {
         }
     }
 
+    @Test
+    public void stringTemporariesCanRemainUninitializedAcrossSuspension() {
+        var result = new StringBuilder();
+        for (var i = 0; i < 3; ++i) {
+            if (getPrimitive() == 23) {
+                result.append(combine("item", String.valueOf(i))).append(';');
+            } else {
+                result.append("unused");
+            }
+        }
+        assertEquals("item0;item1;item2;", result.toString());
+    }
+
     private static String combine(String prefix, String suffix) {
         return prefix.concat(suffix);
     }
@@ -212,6 +225,35 @@ public class AsyncTest {
             return;
         }
         throw new AssertionError("Rejected promise should throw");
+    }
+
+    @Test
+    @SkipPlatform(TestPlatform.C)
+    public void handledPromiseRejectionDoesNotPoisonNextSuspension() {
+        for (var i = 0; i < 3; ++i) {
+            var message = "rejection " + i;
+            var promise = JSPromise.<String>reject(new JSError(message));
+            var failure = assertThrows(RuntimeException.class, promise::await);
+            assertEquals(message, failure.getMessage());
+            assertEquals(23, getPrimitive());
+        }
+    }
+
+    @Test
+    public void handledAsyncErrorDoesNotPoisonWorkerReuse() {
+        for (var i = 0; i < 3; ++i) {
+            var message = "failed job " + i;
+            var failure = assertThrows(RuntimeException.class, () -> failPrimitive(message));
+            assertEquals(message, failure.getMessage());
+            assertEquals(23, getPrimitive());
+        }
+    }
+
+    @Async
+    private native int failPrimitive(String message);
+
+    private void failPrimitive(String message, AsyncCallback<Integer> callback) {
+        setTimeout(() -> callback.error(new RuntimeException(message)));
     }
 
     @Async

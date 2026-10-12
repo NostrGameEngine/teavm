@@ -87,6 +87,24 @@ test('priority never advances a deadline', () => withClock(clock => {
     assert.deepEqual(result, [['now', 0], ['late', 50]]);
 }));
 
+test('interactive input overtakes an aged I/O backlog without starving it', () => withClock(clock => {
+    const scheduler = createScheduler();
+    const result = [];
+    for (let i = 0; i < 100; i++) {
+        scheduler.offer(i, value => result.push(['background', value]), 0, 5);
+    }
+    clock.advance(200); // Every old job has aged to the maximum score.
+    for (let i = 0; i < 8; i++) {
+        scheduler.offer(i, value => result.push(['input', value]), Date.now(), 10);
+    }
+    clock.drain();
+    assert.deepEqual(result.slice(0, 5), [
+        ['input', 0], ['input', 1], ['input', 2], ['input', 3], ['background', 0]
+    ]);
+    assert.deepEqual(result.filter(([kind]) => kind === 'input').map(([, id]) => id), [0, 1, 2, 3, 4, 5, 6, 7]);
+    assert.deepEqual(result.filter(([kind]) => kind === 'background').map(([, id]) => id), Array.from({length: 100}, (_, i) => i));
+}));
+
 test('cancellation works before and after a timer becomes ready', () => withClock(clock => {
     const scheduler = createScheduler();
     const fail = () => assert.fail('Cancelled callback ran');

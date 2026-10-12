@@ -26,6 +26,7 @@ export function createScheduler(options: SchedulerOptions = {}) {
     const tasks = new Map<number, Task>();
     let nextId = 1;
     let scheduled = false;
+    let interactiveBurst = 0;
     const now = () => performance.now();
 
     function requestRun() {
@@ -56,6 +57,7 @@ export function createScheduler(options: SchedulerOptions = {}) {
                 const time = now();
                 let selected = -1;
                 let best = -1;
+                let backgroundReady = false;
                 for (let i = 0; i < 10; i++) {
                     // Cancelled entries release their payload immediately in kill().
                     while (heads[i] && !tasks.has(heads[i]!.id)) {
@@ -64,6 +66,7 @@ export function createScheduler(options: SchedulerOptions = {}) {
                     }
                     const task = heads[i];
                     if (!task) continue;
+                    if (i < 9) backgroundReady = true;
                     // Aging prevents a continuous high-priority producer starving other threads.
                     const score = Math.min(10, task.priority + Math.floor((time - task.readyAt) / 16));
                     if (score > best || (score === best
@@ -73,6 +76,11 @@ export function createScheduler(options: SchedulerOptions = {}) {
                     }
                 }
                 if (selected < 0) return;
+                // Aging must not put an entire old I/O backlog before a newly
+                // arrived MAX_PRIORITY input. Give input a bounded fast lane;
+                // the fifth choice still uses aging, so background work progresses.
+                if (heads[9] && selected !== 9 && interactiveBurst < 4) selected = 9;
+                interactiveBurst = selected === 9 && backgroundReady ? interactiveBurst + 1 : 0;
                 const task = heads[selected]!;
                 heads[selected] = task.next;
                 if (!task.next) tails[selected] = null;

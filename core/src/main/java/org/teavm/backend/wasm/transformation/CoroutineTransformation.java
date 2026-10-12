@@ -17,6 +17,7 @@ package org.teavm.backend.wasm.transformation;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -81,6 +82,7 @@ public class CoroutineTransformation {
 
     public void transform(WasmFunction function) {
         currentFunction = function;
+        makeLocalsDefaultable(function);
         collector = new SuspensionPointCollector();
         collector.visitMany(function.getBody());
         var originalLocals = function.getLocalVariables().size();
@@ -109,6 +111,41 @@ public class CoroutineTransformation {
         stateLocal = null;
         fiberLocal = null;
         usedBreakTargets.clear();
+    }
+
+    static void makeLocalsDefaultable(WasmFunction function) {
+        var nonNullTypes = new HashMap<WasmLocal, WasmType.Reference>();
+        var parameterCount = function.getType().getParameterTypes().size();
+        for (var i = parameterCount; i < function.getLocalVariables().size(); ++i) {
+            var local = function.getLocalVariables().get(i);
+            if (local.getType() instanceof WasmType.Reference) {
+                var type = (WasmType.Reference) local.getType();
+                if (!type.isNullable()) {
+                    nonNullTypes.put(local, type);
+                    local.setType(type.asNullable());
+                }
+            }
+        }
+        // A resume switch bypasses original assignments; the epilogue also saves not-yet-used temporaries.
+        // Their storage must accept null. Preserve the original non-null stack type at actual body reads,
+        // before generating restore/save instructions, which deliberately accept uninitialized storage.
+        new WasmDefaultInstructionVisitor() {
+            @Override
+            public void visit(WasmGetLocal instruction) {
+                var type = nonNullTypes.get(instruction.getLocal());
+                if (type != null) {
+                    instruction.insertNext(WasmInstruction.withLocation(new WasmCast(type), instruction.getLocation()));
+                }
+            }
+
+            @Override
+            public void visit(WasmTeeLocal instruction) {
+                var type = nonNullTypes.get(instruction.getLocal());
+                if (type != null) {
+                    instruction.insertNext(WasmInstruction.withLocation(new WasmCast(type), instruction.getLocation()));
+                }
+            }
+        }.visitMany(function.getBody());
     }
 
     private void generatePrologue(int localsCount) {
