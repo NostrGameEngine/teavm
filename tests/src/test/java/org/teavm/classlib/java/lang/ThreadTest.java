@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.teavm.junit.EachTestCompiledSeparately;
 import org.teavm.junit.TeaVMTest;
@@ -28,6 +29,38 @@ import org.teavm.junit.TeaVMTest;
 @TeaVMTest
 @EachTestCompiledSeparately
 public class ThreadTest {
+    @Test
+    public void monitorHandoffRetainsAllWaitingThreads() throws InterruptedException {
+        Object gate = new Object();
+        List<Integer> completed = new ArrayList<>();
+        var attempted = new AtomicInteger();
+        Thread[] waiters = new Thread[6];
+        synchronized (gate) {
+            for (int i = 0; i < waiters.length; i++) {
+                final int number = i;
+                waiters[i] = new Thread(() -> {
+                    attempted.incrementAndGet();
+                    synchronized (gate) {
+                        Thread.yield();
+                        completed.add(number);
+                    }
+                });
+                waiters[i].setDaemon(true);
+                waiters[i].start();
+            }
+            long deadline = System.currentTimeMillis() + 2000;
+            while (attempted.get() < waiters.length && System.currentTimeMillis() < deadline) {
+                Thread.sleep(1);
+            }
+            assertEquals(waiters.length, attempted.get());
+            Thread.sleep(20);
+        }
+        for (Thread waiter : waiters) {
+            waiter.join(200);
+        }
+        assertEquals(waiters.length, completed.size(), "Every queued monitor waiter must be resumed");
+    }
+
     @Test
     public void priorityIsInheritedAndValidated() {
         Thread current = Thread.currentThread();
